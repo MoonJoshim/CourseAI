@@ -1,6 +1,20 @@
 # 환경변수 파일
 .env
 
+# Node.js 관련
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+.npm
+.eslintcache
+
+# React 빌드 결과물
+build/
+dist/
+
 # Python 관련
 __pycache__/
 *.py[cod]

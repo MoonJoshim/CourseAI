@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import NavBar from './components/NavBar';
 import SearchPage from './pages/SearchPage';
 import DetailPage from './pages/DetailPage';
+import ChatPage from './pages/ChatPage';
 import TrendsPage from './pages/TrendsPage';
 import RecommendPage from './pages/RecommendPage';
 import GPAPage from './pages/GPAPage';
+import ProfilePage from './pages/ProfilePage';
 
 const AICoursePlatform = () => {
   const [currentPage, setCurrentPage] = useState('search');
@@ -120,6 +122,8 @@ const AICoursePlatform = () => {
             setCurrentPage={setCurrentPage}
           />
         );
+      case 'chat':
+        return <ChatPage />;
       case 'detail':
         return (
           <DetailPage 
@@ -143,6 +147,12 @@ const AICoursePlatform = () => {
       case 'gpa':
         return (
           <GPAPage 
+            mockUserProfile={mockUserProfile}
+          />
+        );
+      case 'profile':
+        return (
+          <ProfilePage 
             mockUserProfile={mockUserProfile}
           />
         );

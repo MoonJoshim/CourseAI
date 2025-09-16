@@ -16,86 +16,64 @@ const SearchPage = ({
   setCurrentPage
 }) => {
   return (
-    <div className="space-y-6">
-      {/* AI Search Box */}
-      <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-8 border border-blue-100">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex items-center gap-3 mb-6">
-            <Brain className="text-blue-600 w-8 h-8" />
-            <h2 className="text-2xl font-bold text-gray-800">AI 강의 검색</h2>
-            <span className="bg-gradient-to-r from-blue-500 to-purple-500 text-white text-sm px-3 py-1 rounded-full">
-              Beta
-            </span>
+    <div className="h-[calc(100vh-200px)] flex flex-col">
+      {/* Search Header */}
+      <div className="bg-white border-b border-slate-200 p-4 rounded-t-xl">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-sky-100 rounded-lg">
+            <Search className="w-6 h-6 text-sky-600" />
           </div>
-          
-          <div className="relative mb-4">
-            <input
-              type="text"
-              placeholder="예: 팀 프로젝트 없고 성적 잘 주는 소프트웨어학과 전공 강의 찾아줘"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-6 py-4 pr-16 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg"
-            />
-            <button className="absolute right-3 top-1/2 transform -translate-y-1/2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-              <Search className="w-5 h-5" />
-            </button>
+          <div>
+            <h2 className="text-lg font-semibold text-slate-800">AI 강의 검색</h2>
+            <p className="text-sm text-slate-500">궁금한 강의 정보를 자연어로 검색하세요</p>
           </div>
-          
-          <div className="flex flex-wrap gap-2">
-            <span className="text-sm text-gray-600 mr-2">인기 검색:</span>
-            {['노팀플 강의', '성적 잘주는 교수', '재밌는 전공 강의', '실습 위주 수업'].map(tag => (
-              <button
-                key={tag}
-                onClick={() => setSearchQuery(tag)}
-                className="text-sm bg-white px-3 py-1 rounded-full border hover:bg-blue-50 hover:border-blue-200 transition-colors"
-              >
-                {tag}
-              </button>
-            ))}
-          </div>
+          <span className="bg-sky-600 text-white text-xs px-2 py-1 rounded-full font-medium ml-auto">Beta</span>
         </div>
       </div>
 
-      {/* Quick Stats */}
-      <div className="grid grid-cols-4 gap-6">
-        {[
-          { label: '분석된 강의', value: '1,247개', icon: BookOpen, color: 'blue' },
-          { label: '강의평', value: '15,892개', icon: MessageSquare, color: 'green' },
-          { label: '활성 사용자', value: '3,421명', icon: Users, color: 'purple' },
-          { label: 'AI 분석', value: '실시간', icon: Zap, color: 'orange' }
-        ].map((stat, index) => {
-          const Icon = stat.icon;
-          return (
-            <div key={index} className="bg-white rounded-xl p-6 border border-gray-200">
-              <div className="flex items-center gap-4">
-                <div className={`bg-${stat.color}-100 rounded-lg p-3`}>
-                  <Icon className={`w-6 h-6 text-${stat.color}-600`} />
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">{stat.label}</p>
-                  <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-                </div>
-              </div>
-            </div>
-          );
-        })}
+      {/* Search Input */}
+      <div className="bg-white border-b border-slate-200 p-4">
+        <div className="relative">
+          <input
+            type="text"
+            placeholder="예: 팀 프로젝트 없고 성적 잘 주는 소프트웨어학과 전공 강의 찾아줘"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full px-4 py-3 pr-12 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-transparent bg-slate-50 focus:bg-white transition-colors"
+          />
+          <button className="absolute right-3 top-1/2 transform -translate-y-1/2 p-2 text-sky-600 hover:text-sky-700">
+            <Search className="w-5 h-5" />
+          </button>
+        </div>
+        
+        <div className="flex flex-wrap gap-2 mt-3">
+          <span className="text-sm text-slate-600">빠른 검색:</span>
+          {['노팀플 강의', '성적 잘주는 교수', '재밌는 전공 강의', '실습 위주 수업'].map(tag => (
+            <button
+              key={tag}
+              onClick={() => setSearchQuery(tag)}
+              className="text-sm bg-sky-50 text-sky-700 px-3 py-1 rounded-full border border-sky-200 hover:bg-sky-100 transition-colors"
+            >
+              {tag}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Filters and Sort */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-semibold">강의 목록</h3>
-          <div className="flex items-center gap-4">
-            <div className="flex gap-2">
+      {/* Controls */}
+      <div className="bg-white border-b border-slate-200 p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex gap-1 p-1 bg-slate-100 rounded-lg">
               <button
                 onClick={() => setViewMode('grid')}
-                className={`p-2 rounded-lg ${viewMode === 'grid' ? 'bg-blue-100 text-blue-600' : 'text-gray-500 hover:bg-gray-100'}`}
+                className={`p-2 rounded-md transition-colors ${viewMode === 'grid' ? 'bg-white text-sky-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
               >
                 <Grid className="w-4 h-4" />
               </button>
               <button
                 onClick={() => setViewMode('list')}
-                className={`p-2 rounded-lg ${viewMode === 'list' ? 'bg-blue-100 text-blue-600' : 'text-gray-500 hover:bg-gray-100'}`}
+                className={`p-2 rounded-md transition-colors ${viewMode === 'list' ? 'bg-white text-sky-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
               >
                 <List className="w-4 h-4" />
               </button>
@@ -104,7 +82,7 @@ const SearchPage = ({
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white text-sm"
             >
               <option value="rating">평점 높은 순</option>
               <option value="popularity">인기 순</option>
@@ -112,113 +90,68 @@ const SearchPage = ({
               <option value="alphabetical">가나다 순</option>
             </select>
           </div>
-        </div>
 
-        {/* Filter Bar */}
-        <div className="flex gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
-          <select className="px-3 py-2 border border-gray-200 rounded-lg text-sm">
-            <option value="">전체 학과</option>
-            <option value="software">소프트웨어학과</option>
-            <option value="computer">컴퓨터공학과</option>
-            <option value="ai">AI학과</option>
-          </select>
-          
-          <select className="px-3 py-2 border border-gray-200 rounded-lg text-sm">
-            <option value="">강의 유형</option>
-            <option value="major">전공필수</option>
-            <option value="elective">전공선택</option>
-            <option value="general">교양</option>
-          </select>
-          
-          <select className="px-3 py-2 border border-gray-200 rounded-lg text-sm">
-            <option value="">학점</option>
-            <option value="1">1학점</option>
-            <option value="2">2학점</option>
-            <option value="3">3학점</option>
-          </select>
-          
-          <button className="px-4 py-2 text-blue-600 hover:bg-blue-50 rounded-lg text-sm">
-            필터 초기화
-          </button>
+          {/* Quick Stats */}
+          <div className="flex items-center gap-4 text-sm">
+            <div className="flex items-center gap-1">
+              <BookOpen className="w-4 h-4 text-sky-600" />
+              <span className="text-slate-600">1,247개 강의</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <MessageSquare className="w-4 h-4 text-sky-600" />
+              <span className="text-slate-600">15,892개 리뷰</span>
+            </div>
+          </div>
         </div>
+      </div>
 
-        {/* Course Grid */}
-        <div className={`grid gap-6 ${viewMode === 'grid' ? 'grid-cols-2' : 'grid-cols-1'}`}>
+      {/* Course List */}
+      <div className="flex-1 overflow-y-auto p-4 bg-slate-50">
+        <div className={`grid gap-3 ${viewMode === 'grid' ? 'grid-cols-2' : 'grid-cols-1'}`}>
           {mockCourses.map(course => (
-            <div key={course.id} className="border border-gray-200 rounded-xl p-6 hover:shadow-lg transition-shadow">
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <h3 className="text-lg font-bold text-gray-900">{course.name}</h3>
-                    <span className="text-sm text-gray-500">({course.courseCode})</span>
-                    <button 
-                      className={`p-1 rounded-full ${course.bookmarked ? 'text-red-500' : 'text-gray-400 hover:text-red-500'}`}
-                    >
+            <div key={course.id} className="bg-white border border-slate-200 rounded-lg p-4 hover:border-sky-200 transition-colors">
+              <div className="flex justify-between items-start mb-3">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="font-semibold text-slate-800">{course.name}</h3>
+                    <span className="text-sm text-slate-500">({course.courseCode})</span>
+                    <button className={`p-1 rounded-full transition-colors ${course.bookmarked ? 'text-red-500' : 'text-slate-400 hover:text-red-400'}`}>
                       <Heart className={`w-4 h-4 ${course.bookmarked ? 'fill-current' : ''}`} />
                     </button>
                   </div>
-                  <p className="text-gray-600 mb-1">{course.professor} • {course.department}</p>
-                  <p className="text-sm text-gray-500">{course.credits}학점 • {course.timeSlot} • {course.room}</p>
+                  <p className="text-sm text-slate-600">{course.professor} • {course.department}</p>
+                  <p className="text-xs text-slate-500">{course.credits}학점 • {course.timeSlot}</p>
                 </div>
                 
                 <div className="text-right">
                   <div className="flex items-center gap-1 mb-1">
-                    <Star className="w-4 h-4 text-yellow-500 fill-current" />
-                    <span className="font-bold">{course.rating}</span>
-                    <span className="text-sm text-gray-500">({course.reviewCount})</span>
+                    <Star className="w-4 h-4 text-amber-400 fill-current" />
+                    <span className="font-semibold text-slate-800">{course.rating}</span>
                   </div>
-                  <div className="flex items-center gap-1 text-sm">
-                    <TrendingUp className={`w-4 h-4 ${course.trend === 'up' ? 'text-green-500' : 'text-red-500'}`} />
-                    <span className="text-gray-500">인기도 {course.popularity}</span>
+                  <div className="flex items-center gap-1 text-xs">
+                    <TrendingUp className={`w-3 h-3 ${course.trend === 'up' ? 'text-emerald-500' : 'text-slate-400'}`} />
+                    <span className="text-slate-500">{course.popularity}</span>
                   </div>
                 </div>
               </div>
 
               {/* AI Summary */}
-              <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg p-4 mb-4 border border-purple-100">
-                <div className="flex items-center gap-2 mb-2">
-                  <Zap className="w-4 h-4 text-purple-600" />
-                  <span className="text-sm font-semibold text-purple-800">AI 요약</span>
-                  <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded">신뢰도 {course.sentiment}%</span>
+              <div className="bg-sky-50 rounded-lg p-3 mb-3 border border-sky-100">
+                <div className="flex items-center gap-2 mb-1">
+                  <Zap className="w-3 h-3 text-sky-600" />
+                  <span className="text-xs font-medium text-sky-800">AI 요약</span>
+                  <span className="text-xs bg-sky-200 text-sky-700 px-1.5 py-0.5 rounded">신뢰도 {course.sentiment}%</span>
                 </div>
-                <p className="text-sm text-gray-700">{course.aiSummary}</p>
+                <p className="text-xs text-sky-700">{course.aiSummary}</p>
               </div>
 
               {/* Tags */}
-              <div className="flex flex-wrap gap-2 mb-4">
+              <div className="flex flex-wrap gap-1 mb-3">
                 {course.tags.map((tag, index) => (
-                  <span key={index} className="bg-blue-100 text-blue-800 text-xs px-3 py-1 rounded-full">
+                  <span key={index} className="bg-slate-100 text-slate-600 text-xs px-2 py-1 rounded border border-slate-200">
                     {tag}
                   </span>
                 ))}
-              </div>
-
-              {/* Quick Stats */}
-              <div className="grid grid-cols-3 gap-4 pt-4 border-t border-gray-100 text-center text-sm">
-                <div>
-                  <p className="text-gray-500">난이도</p>
-                  <div className="flex justify-center gap-1 mt-1">
-                    {[...Array(5)].map((_, i) => (
-                      <div key={i} className={`w-2 h-2 rounded-full ${i < course.difficulty ? 'bg-orange-400' : 'bg-gray-200'}`} />
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <p className="text-gray-500">과제량</p>
-                  <div className="flex justify-center gap-1 mt-1">
-                    {[...Array(5)].map((_, i) => (
-                      <div key={i} className={`w-2 h-2 rounded-full ${i < course.workload ? 'bg-red-400' : 'bg-gray-200'}`} />
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <p className="text-gray-500">성적</p>
-                  <div className="flex justify-center gap-1 mt-1">
-                    {[...Array(5)].map((_, i) => (
-                      <div key={i} className={`w-2 h-2 rounded-full ${i < course.gradeGenerosity ? 'bg-green-400' : 'bg-gray-200'}`} />
-                    ))}
-                  </div>
-                </div>
               </div>
 
               <button 
@@ -226,7 +159,7 @@ const SearchPage = ({
                   setSelectedCourse(course);
                   setCurrentPage('detail');
                 }}
-                className="w-full mt-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="w-full py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 transition-colors text-sm font-medium"
               >
                 상세 보기
               </button>
