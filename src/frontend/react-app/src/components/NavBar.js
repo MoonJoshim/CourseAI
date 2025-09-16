@@ -8,15 +8,18 @@ const NavBar = ({ currentPage, setCurrentPage, mockUserProfile }) => {
     <div className="bg-white border-b border-slate-200 px-6 py-4">
       <div className="flex items-center justify-between max-w-7xl mx-auto">
         <div className="flex items-center gap-8">
-          <div className="flex items-center gap-3">
+          <button 
+            onClick={() => setCurrentPage('search')}
+            className="flex items-center gap-3 hover:bg-slate-50 rounded-lg p-2 transition-colors"
+          >
             <div className="bg-gradient-to-r from-sky-500 to-indigo-500 rounded-lg p-2">
-              <Brain className="w-8 h-8 text-white" />
+              <Brain className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-slate-800">CourseAI</h1>
-              <p className="text-sm text-slate-500">스마트 강의 분석 플랫폼</p>
+              <h1 className="text-lg font-bold text-slate-800">CourseAI</h1>
+              <p className="text-xs text-slate-500">스마트 강의 분석</p>
             </div>
-          </div>
+          </button>
           
           <nav className="flex gap-1">
             {[
