@@ -15,7 +15,7 @@ from datetime import datetime
 
 # 기존 크롤링 모듈 import
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
-from src.api.lecture_api import search_lecture, get_or_create_driver, ensure_logged_in
+from backend.api.lecture_api import search_lecture, get_or_create_driver, ensure_logged_in
 
 # 환경변수 로드
 load_dotenv()
