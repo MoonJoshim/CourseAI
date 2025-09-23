@@ -12,6 +12,7 @@ import json
 import sys
 from dotenv import load_dotenv
 from datetime import datetime
+from backend.api import get_mongo_db
 
 # 기존 크롤링 모듈 import
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
@@ -320,6 +321,16 @@ def index():
         <li>"김교수님 강의 어떤지 궁금해"</li>
     </ul>
     '''
+
+@app.route('/api/health/db', methods=['GET'])
+def health_db():
+    """MongoDB 연결 헬스체크"""
+    try:
+        db = get_mongo_db()
+        result = db.command('ping')
+        return jsonify({'ok': True, 'result': result}), 200
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
 
 if __name__ == '__main__':
     print("🤖 에브리타임 AI 챗봇 API 서버 시작")

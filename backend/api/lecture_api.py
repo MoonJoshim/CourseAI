@@ -22,6 +22,7 @@ from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.chrome.service import Service
 import json
 import re
+from backend.api import get_mongo_db
 
 # 환경변수 로드
 load_dotenv()
@@ -516,6 +517,16 @@ def index():
         <li><code>GET /api/search?keyword=강의명</code> - 강의 검색</li>
     </ul>
     '''
+
+@app.route('/api/health/db', methods=['GET'])
+def health_db():
+    """MongoDB 연결 헬스체크"""
+    try:
+        db = get_mongo_db()
+        result = db.command('ping')
+        return jsonify({'ok': True, 'result': result}), 200
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
 
 if __name__ == '__main__':
     import atexit

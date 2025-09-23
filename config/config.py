@@ -46,6 +46,12 @@ class Config:
     IMPLICIT_WAIT = 10
     EXPLICIT_WAIT = 10
     
+    # MongoDB 설정
+    MONGO_INITDB_ROOT_USERNAME = os.getenv('MONGO_INITDB_ROOT_USERNAME', 'root')
+    MONGO_INITDB_ROOT_PASSWORD = os.getenv('MONGO_INITDB_ROOT_PASSWORD', 'example')
+    MONGO_DB_NAME = os.getenv('MONGO_DB_NAME', 'crawller')
+    MONGO_URI = os.getenv('MONGO_URI', f"mongodb://{MONGO_INITDB_ROOT_USERNAME}:{MONGO_INITDB_ROOT_PASSWORD}@localhost:27017/{MONGO_DB_NAME}?authSource=admin")
+
     @classmethod
     def validate(cls):
         """설정 유효성 검사"""
