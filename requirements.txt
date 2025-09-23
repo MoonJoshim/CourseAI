@@ -26,4 +26,3 @@ loguru==0.7.2
 # Flask API 서버
 flask==3.0.0
 flask-cors==4.0.0
-pymongo[srv]==4.10.1
