@@ -1,5 +1,6 @@
 # 환경변수 파일
 .env
+.env.backup
 
 # Node.js 관련
 node_modules/
