@@ -12,10 +12,10 @@ import json
 import sys
 from dotenv import load_dotenv
 from datetime import datetime
-from backend.api import get_mongo_db
-
-# 기존 크롤링 모듈 import
+# 프로젝트 루트 경로 추가
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
+
+from backend.api import get_mongo_db
 from backend.api.lecture_api import search_lecture, get_or_create_driver, ensure_logged_in
 
 # 환경변수 로드
@@ -112,67 +112,52 @@ def handle_function_call(function_name, arguments):
         
         if function_name == "search_lecture":
             keyword = arguments.get("keyword")
-            if ensure_logged_in():
-                driver = get_or_create_driver()
-                results = search_lecture(driver, keyword)
-                return {
-                    "success": True,
-                    "function": "search_lecture",
-                    "keyword": keyword,
-                    "results": results,
-                    "count": len(results)
-                }
-            else:
-                return {
-                    "success": False,
-                    "error": "로그인 실패"
-                }
+            # DB에서 직접 검색 (크롤링 불필요)
+            from backend.api.lecture_api import search_courses_from_db
+            results = search_courses_from_db(keyword)
+            return {
+                "success": True,
+                "function": "search_lecture",
+                "keyword": keyword,
+                "results": results,
+                "count": len(results)
+            }
                 
         elif function_name == "compare_lectures":
             keywords = arguments.get("keywords", [])
             all_results = {}
             
-            if ensure_logged_in():
-                driver = get_or_create_driver()
-                for keyword in keywords:
-                    results = search_lecture(driver, keyword)
-                    all_results[keyword] = results
-                
-                return {
-                    "success": True,
-                    "function": "compare_lectures",
-                    "keywords": keywords,
-                    "results": all_results
-                }
-            else:
-                return {
-                    "success": False,
-                    "error": "로그인 실패"
-                }
+            # DB에서 직접 검색 (크롤링 불필요)
+            from backend.api.lecture_api import search_courses_from_db
+            for keyword in keywords:
+                results = search_courses_from_db(keyword)
+                all_results[keyword] = results
+            
+            return {
+                "success": True,
+                "function": "compare_lectures",
+                "keywords": keywords,
+                "results": all_results
+            }
                 
         elif function_name == "get_recommendations":
             category = arguments.get("category")
             keywords = arguments.get("keywords", [])
             all_results = {}
             
-            if ensure_logged_in():
-                driver = get_or_create_driver()
-                for keyword in keywords:
-                    results = search_lecture(driver, keyword)
-                    all_results[keyword] = results
-                
-                return {
-                    "success": True,
-                    "function": "get_recommendations",
-                    "category": category,
-                    "keywords": keywords,
-                    "results": all_results
-                }
-            else:
-                return {
-                    "success": False,
-                    "error": "로그인 실패"
-                }
+            # DB에서 직접 검색 (크롤링 불필요)
+            from backend.api.lecture_api import search_courses_from_db
+            for keyword in keywords:
+                results = search_courses_from_db(keyword)
+                all_results[keyword] = results
+            
+            return {
+                "success": True,
+                "function": "get_recommendations",
+                "category": category,
+                "keywords": keywords,
+                "results": all_results
+            }
         
         else:
             return {
