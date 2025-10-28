@@ -37,6 +37,7 @@ class Message(BaseModel):
             datetime: lambda v: v.isoformat(),
             ObjectId: str
         }
+        validate_by_name = True
 
 
 class Conversation(BaseModel):
@@ -69,6 +70,7 @@ class Conversation(BaseModel):
             datetime: lambda v: v.isoformat(),
             ObjectId: str
         }
+        validate_by_name = True
         allow_population_by_field_name = True
 
 
@@ -104,3 +106,4 @@ class ChatResponse(BaseModel):
             datetime: lambda v: v.isoformat(),
             ObjectId: str
         }
+        validate_by_name = True

@@ -28,6 +28,8 @@ class Review(BaseModel):
             datetime: lambda v: v.isoformat(),
             ObjectId: str
         }
+        validate_by_name = True
+        populate_by_name = True
 
 
 class CourseDetails(BaseModel):
@@ -43,7 +45,7 @@ class CourseDetails(BaseModel):
 
 class Course(BaseModel):
     """강의 모델"""
-    _id: Optional[ObjectId] = Field(None, alias="_id")
+    id: Optional[ObjectId] = Field(None, alias="_id")
     course_id: str = Field(..., description="강의 고유 ID (예: SW101)")
     course_name: str = Field(..., description="강의명")
     professor: str = Field(..., description="교수명")
@@ -79,7 +81,8 @@ class Course(BaseModel):
             datetime: lambda v: v.isoformat(),
             ObjectId: str
         }
-        allow_population_by_field_name = True
+        validate_by_name = True
+        populate_by_name = True
 
 
 class CourseSearchResult(BaseModel):
@@ -94,3 +97,5 @@ class CourseSearchResult(BaseModel):
             datetime: lambda v: v.isoformat(),
             ObjectId: str
         }
+        validate_by_name = True
+        populate_by_name = True

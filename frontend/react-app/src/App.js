@@ -7,6 +7,7 @@ import TrendsPage from './pages/TrendsPage';
 import RecommendPage from './pages/RecommendPage';
 import GPAPage from './pages/GPAPage';
 import ProfilePage from './pages/ProfilePage';
+import CoursesPage from './pages/CoursesPage';
 
 const AICoursePlatform = () => {
   const [currentPage, setCurrentPage] = useState('search');
@@ -156,6 +157,8 @@ const AICoursePlatform = () => {
             mockUserProfile={mockUserProfile}
           />
         );
+      case 'courses':
+        return <CoursesPage />;
       default:
         return (
           <SearchPage 
