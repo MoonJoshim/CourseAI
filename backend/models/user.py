@@ -21,6 +21,7 @@ class UserPreferences(BaseModel):
             datetime: lambda v: v.isoformat(),
             ObjectId: str
         }
+        validate_by_name = True
 
 
 class UserProfile(BaseModel):
@@ -62,6 +63,7 @@ class UserProfile(BaseModel):
             datetime: lambda v: v.isoformat(),
             ObjectId: str
         }
+        validate_by_name = True
         allow_population_by_field_name = True
 
 
@@ -85,4 +87,5 @@ class UserActivity(BaseModel):
             datetime: lambda v: v.isoformat(),
             ObjectId: str
         }
+        validate_by_name = True
         allow_population_by_field_name = True
