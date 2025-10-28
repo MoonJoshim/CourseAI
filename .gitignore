@@ -75,3 +75,6 @@ chromedriver
 # 임시 파일
 *.tmp
 *.temp
+
+#vm 정보
+moonjoshim
