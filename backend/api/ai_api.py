@@ -6,12 +6,12 @@ OpenAI GPT-4를 이용한 자연어 처리 및 Function Calling
 
 from flask import Flask, jsonify, request
 from flask_cors import CORS
-import openai
 import os
 import json
 import sys
 from dotenv import load_dotenv
 from datetime import datetime
+import google.generativeai as genai
 # 프로젝트 루트 경로 추가
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 
@@ -25,9 +25,12 @@ app = Flask(__name__)
 app.config['JSON_AS_ASCII'] = False
 CORS(app)
 
-# OpenAI 설정
-openai.api_key = os.getenv('OPENAI_API_KEY')
-client = openai.OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+# Gemini 설정
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY') or os.getenv('GOOGLE_API_KEY') or os.getenv('GOOGLE_GEMINI_API_KEY')
+if GEMINI_API_KEY:
+    genai.configure(api_key=GEMINI_API_KEY)
+else:
+    print("[WARN] GEMINI_API_KEY 환경변수가 설정되지 않았습니다.")
 
 # 챗봇 시스템 프롬프트
 SYSTEM_PROMPT = """
@@ -196,64 +199,31 @@ def chat():
         # 현재 사용자 메시지 추가
         messages.append({"role": "user", "content": user_message})
         
-        # OpenAI API 호출
-        response = client.chat.completions.create(
-            model="gpt-4-1106-preview",
-            messages=messages,
-            functions=CHATBOT_FUNCTIONS,
-            function_call="auto",
-            temperature=0.7,
-            max_tokens=1000
-        )
-        
-        message = response.choices[0].message
-        
-        # Function Call 처리
-        if message.function_call:
-            function_name = message.function_call.name
-            function_args = json.loads(message.function_call.arguments)
-            
-            print(f"🔧 Function Call 감지: {function_name}")
-            
-            # 함수 실행
-            function_result = handle_function_call(function_name, function_args)
-            
-            # 함수 결과를 포함하여 최종 응답 생성
-            messages.append({
-                "role": "assistant",
-                "content": None,
-                "function_call": {
-                    "name": function_name,
-                    "arguments": json.dumps(function_args)
-                }
-            })
-            
-            messages.append({
-                "role": "function",
-                "name": function_name,
-                "content": json.dumps(function_result, ensure_ascii=False)
-            })
-            
-            # 최종 응답 생성
-            final_response = client.chat.completions.create(
-                model="gpt-4-1106-preview",
-                messages=messages,
-                temperature=0.7,
-                max_tokens=1500
-            )
-            
-            ai_response = final_response.choices[0].message.content
-            
-        else:
-            # 일반 대화 응답
-            ai_response = message.content
+        # Gemini API 호출 (단순 대화)
+        model = genai.GenerativeModel("gemini-1.5-flash")
+        # 히스토리를 하나의 프롬프트로 연결
+        history_text = "\n".join([
+            f"사용자: {h.get('user','')}\n어시스턴트: {h.get('assistant','')}" for h in conversation_history[-5:]
+        ])
+        prompt = f"""
+{SYSTEM_PROMPT}
+
+이전 대화(있으면):
+{history_text}
+
+새 사용자 메시지:
+{user_message}
+""".strip()
+
+        gen = model.generate_content(prompt)
+        ai_response = gen.text if hasattr(gen, 'text') else str(gen)
         
         print(f"🤖 AI 응답: {ai_response[:100]}...")
         
         return jsonify({
             'response': ai_response,
             'timestamp': datetime.now().isoformat(),
-            'function_called': message.function_call.name if message.function_call else None
+            'model': 'gemini-1.5-flash'
         })
         
     except Exception as e:
@@ -318,8 +288,7 @@ def health_db():
         return jsonify({'ok': False, 'error': str(e)}), 500
 
 if __name__ == '__main__':
-    print("🤖 에브리타임 AI 챗봇 API 서버 시작")
+    print("🤖 에브리타임 AI 챗봇 API 서버 시작 (Gemini)")
     print("📍 http://localhost:5003")
-    print("🧠 OpenAI GPT-4 Function Calling 활성화")
     
     app.run(debug=True, host='0.0.0.0', port=5003)
