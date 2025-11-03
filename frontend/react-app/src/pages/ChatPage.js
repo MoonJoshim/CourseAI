@@ -11,8 +11,11 @@ const ChatPage = () => {
     }
   ]);
   const [inputMessage, setInputMessage] = useState('');
+  const [isSending, setIsSending] = useState(false);
 
-  const handleSendMessage = () => {
+  const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:5003';
+
+  const handleSendMessage = async () => {
     if (!inputMessage.trim()) return;
 
     // 사용자 메시지 추가
@@ -23,16 +26,63 @@ const ChatPage = () => {
       timestamp: new Date()
     };
 
-    // AI 응답 시뮬레이션
-    const aiResponse = {
-      id: messages.length + 2,
-      type: 'assistant',
-      content: `"${inputMessage}"에 대한 답변입니다. 실제로는 AI API와 연동되어 강의 정보를 분석하고 답변을 제공합니다.`,
-      timestamp: new Date()
-    };
+    // 기존 대화 히스토리를 API가 요구하는 형태로 변환
+    const historyForApi = messages
+      .filter(m => m.type === 'user' || m.type === 'assistant')
+      .reduce((acc, m) => {
+        const last = acc[acc.length - 1];
+        if (m.type === 'user') {
+          acc.push({ user: m.content, assistant: '' });
+        } else {
+          if (last && !last.assistant) {
+            last.assistant = m.content;
+          } else {
+            acc.push({ user: '', assistant: m.content });
+          }
+        }
+        return acc;
+      }, []);
 
-    setMessages([...messages, userMessage, aiResponse]);
+    setMessages(prev => [...prev, userMessage]);
     setInputMessage('');
+
+    try {
+      setIsSending(true);
+      const res = await fetch(`${API_BASE}/api/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          message: userMessage.content,
+          history: historyForApi
+        })
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || `API 오류 (status ${res.status})`);
+      }
+
+      const data = await res.json();
+      const assistantMessage = {
+        id: userMessage.id + 1,
+        type: 'assistant',
+        content: data.response || '응답이 비어 있습니다.',
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, assistantMessage]);
+    } catch (e) {
+      const errorMessage = {
+        id: userMessage.id + 1,
+        type: 'assistant',
+        content: `요청 중 오류가 발생했어요: ${e.message}`,
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsSending(false);
+    }
   };
 
   const quickQuestions = [
@@ -130,11 +180,11 @@ const ChatPage = () => {
           </div>
           <button
             onClick={handleSendMessage}
-            disabled={!inputMessage.trim()}
+            disabled={!inputMessage.trim() || isSending}
             className="px-6 py-3 bg-sky-600 hover:bg-sky-700 disabled:bg-slate-300 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
           >
             <Send className="w-4 h-4" />
-            전송
+            {isSending ? '전송 중...' : '전송'}
           </button>
         </div>
       </div>
