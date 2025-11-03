@@ -1,30 +1,30 @@
 # 에브리타임 크롤링 프로젝트 의존성
-# Python 3.9+ 기준
+# Python 3.9+ 기준 (Python 3.13 호환 버전으로 정렬)
 
 # 웹 자동화
-selenium==4.15.2
+selenium==4.24.0
 
 # HTML 파싱
-beautifulsoup4==4.12.2
+beautifulsoup4==4.12.3
 
 # HTTP 요청 및 세션 관리
-requests==2.31.0
+requests==2.32.3
 
 # 환경변수 관리 (ID/PW 숨기기용)
-python-dotenv==1.0.0
+python-dotenv==1.0.1
 
 # 추가 유틸리티 패키지들
 # 웹드라이버 자동 관리
-webdriver-manager==4.0.1
+webdriver-manager==4.0.2
 
 # 데이터 처리
-pandas==2.1.3
+pandas==2.2.2
 
 # 로깅
 loguru==0.7.2
 
 # Flask API 서버
-flask==3.0.0
+flask==3.0.3
 flask-cors==4.0.0
 pymongo[srv]==4.10.1
 pinecone-client==4.1.0
