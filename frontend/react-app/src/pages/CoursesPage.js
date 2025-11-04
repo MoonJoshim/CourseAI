@@ -1,5 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Search, Filter, Grid, List, BookOpen, User, Clock, Star, GraduationCap } from 'lucide-react';
+import softwareCourses from '../data/softwareCourses.json';
+
+const STATIC_COURSES = softwareCourses;
+const PAGE_SIZE = 50;
 
 const CoursesPage = () => {
   const [courses, setCourses] = useState([]);
@@ -7,7 +11,6 @@ const CoursesPage = () => {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
-  const [offset, setOffset] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState('');
@@ -16,133 +19,120 @@ const CoursesPage = () => {
   const [sortBy, setSortBy] = useState('course_name');
   const [showFilters, setShowFilters] = useState(false);
 
-  // API에서 강의 데이터 가져오기
-  useEffect(() => {
-    fetchCourses(true); // 초기 로딩
-  }, []);
+  const loadMoreRef = useRef(null);
+  const offsetRef = useRef(0);
+  const searchQueryRef = useRef('');
+  const hasMoreRef = useRef(true);
 
-  const fetchCourses = async (reset = false) => {
-    try {
-      if (reset) {
-        setLoading(true);
-        setOffset(0);
-        setCourses([]);
-        setFilteredCourses([]);
-      } else {
-        setLoadingMore(true);
+  const fetchCourses = useCallback(({ reset = false, query } = {}) => {
+    const normalizedTerm = typeof query === 'string' ? query.trim() : searchQueryRef.current;
+
+    if (!reset && !hasMoreRef.current) {
+      return;
+    }
+
+    if (reset) {
+      searchQueryRef.current = normalizedTerm;
+      offsetRef.current = 0;
+      setLoading(true);
+      setCourses([]);
+      setFilteredCourses([]);
+      setHasMore(true);
+      hasMoreRef.current = true;
+    } else {
+      setLoadingMore(true);
+    }
+
+    const currentOffset = reset ? 0 : offsetRef.current;
+    const keywordLower = normalizedTerm.toLowerCase();
+
+    const matchesKeyword = (course) => {
+      if (!keywordLower) {
+        return true;
       }
 
-      const currentOffset = reset ? 0 : offset;
-      const response = await fetch(`http://localhost:5002/api/search?keyword=${encodeURIComponent(searchTerm)}&limit=50&offset=${currentOffset}`);
-      const data = await response.json();
-      
-      if (data.results && data.results.length > 0) {
-        if (reset) {
-          setCourses(data.results);
-          setFilteredCourses(data.results);
-        } else {
-          setCourses(prev => [...prev, ...data.results]);
-          setFilteredCourses(prev => [...prev, ...data.results]);
-        }
-        setTotalCount(data.total_count || 0);
-        setHasMore(data.has_more || false);
-        setOffset(currentOffset + data.results.length);
-      } else if (reset) {
-        // API가 빈 검색어를 지원하지 않으면 샘플 데이터 사용
-        const sampleData = getSampleCourses();
-        setCourses(sampleData);
-        setFilteredCourses(sampleData);
-        setTotalCount(sampleData.length);
-        setHasMore(false);
+      const tokens = [
+        course.course_name,
+        course.professor,
+        course.department,
+        course.major,
+        course.course_code,
+        course.course_english_name,
+        course.lecture_time,
+      ];
+
+      if (Array.isArray(course.tags)) {
+        tokens.push(...course.tags);
       }
-    } catch (error) {
-      console.error('강의 데이터 로드 오류:', error);
+      if (Array.isArray(course.keywords)) {
+        tokens.push(...course.keywords);
+      }
+
+      return tokens.some((value) => (value || '').toString().toLowerCase().includes(keywordLower));
+    };
+
+    const filteredAll = STATIC_COURSES.filter(matchesKeyword);
+    const nextSlice = filteredAll.slice(currentOffset, currentOffset + PAGE_SIZE);
+
+    const applyResults = () => {
       if (reset) {
-        // 오류 시 샘플 데이터 사용
-        const sampleData = getSampleCourses();
-        setCourses(sampleData);
-        setFilteredCourses(sampleData);
-        setTotalCount(sampleData.length);
-        setHasMore(false);
+        setCourses(nextSlice);
+        setFilteredCourses(nextSlice);
+      } else if (nextSlice.length > 0) {
+        setCourses((prev) => [...prev, ...nextSlice]);
+        setFilteredCourses((prev) => [...prev, ...nextSlice]);
       }
-    } finally {
+
+      const newOffset = currentOffset + nextSlice.length;
+      offsetRef.current = newOffset;
+
+      const total = filteredAll.length;
+      setTotalCount(total);
+
+      const nextHasMore = newOffset < total;
+      setHasMore(nextHasMore);
+      hasMoreRef.current = nextHasMore;
+
+      if (reset && nextSlice.length === 0) {
+        setHasMore(false);
+        hasMoreRef.current = false;
+      }
+
       setLoading(false);
       setLoadingMore(false);
-    }
-  };
+    };
 
-  // 샘플 데이터 (API 실패 시 사용)
-  const getSampleCourses = () => [
-    {
-      course_id: "2025-2-0001",
-      course_name: "3D반도체설계",
-      professor: "김장현",
-      department: "미래반도체 연계전공",
-      major: "미래반도체 연계전공(과)",
-      credits: 3,
-      hours: 3,
-      course_code: "ASE4016",
-      lecture_time: "화D(혜210) 목C(혜210)",
-      lecture_method: "대면수업",
-      class_type: "이론",
-      course_english_name: "3D Semiconductor Design",
-      target_grade: "",
-      average_rating: 0.0,
-      total_reviews: 0,
-      source: "database"
-    },
-    {
-      course_id: "2025-2-0002",
-      course_name: "3D어셋크리에이션",
-      professor: "석혜정",
-      department: "디지털미디어학과",
-      major: "디지털미디어전공(과)",
-      credits: 3,
-      hours: 3,
-      course_code: "DGMD214",
-      lecture_time: "월B(산419) 목B(산419)",
-      lecture_method: "대면수업",
-      class_type: "이론",
-      course_english_name: "3D Asset Creation",
-      target_grade: "2학년",
-      average_rating: 0.0,
-      total_reviews: 0,
-      source: "database"
-    },
-    {
-      course_id: "2025-2-0003",
-      course_name: "AI융합캡스톤디자인1",
-      professor: "고종원",
-      department: "인공지능융합학과",
-      major: "인공지능융합전공(과)",
-      credits: 3,
-      hours: 3,
-      course_code: "AAI431",
-      lecture_time: "수10(산207) 수11(산207) 수12(산207)",
-      lecture_method: "대면수업",
-      class_type: "실험·실습",
-      course_english_name: "Applied AI Capstone Design 1",
-      target_grade: "",
-      average_rating: 0.0,
-      total_reviews: 0,
-      source: "database"
+    // 비동기 흐름을 흉내 내기 위해 다음 틱에 상태 업데이트
+    if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+      window.requestAnimationFrame(applyResults);
+    } else {
+      setTimeout(applyResults, 0);
     }
-  ];
+  }, []);
+
+  // 초기 로딩
+  useEffect(() => {
+    fetchCourses({ reset: true, query: '' });
+  }, [fetchCourses]);
 
   // 검색어 변경 시 새로운 검색 실행
   useEffect(() => {
+    const normalizedTerm = searchTerm.trim();
+
+    if (normalizedTerm === searchQueryRef.current) {
+      return () => {};
+    }
+
     const timeoutId = setTimeout(() => {
-      if (searchTerm !== '') {
-        fetchCourses(true); // 검색어가 있으면 새로 검색
-      }
-    }, 500); // 500ms 디바운스
+      fetchCourses({ reset: true, query: normalizedTerm });
+    }, 500);
 
     return () => clearTimeout(timeoutId);
-  }, [searchTerm]);
+  }, [fetchCourses, searchTerm]);
 
   // 필터링 (클라이언트 사이드)
   useEffect(() => {
-    let filtered = courses;
+    let filtered = [...courses];
 
     // 학과 필터링
     if (selectedDepartment) {
@@ -180,23 +170,24 @@ const CoursesPage = () => {
   const professors = [...new Set(courses.map(course => course.professor))].sort();
 
   // 무한 스크롤 처리
-  const handleScroll = () => {
-    if (loadingMore || !hasMore) return;
-
-    const scrollTop = document.documentElement.scrollTop;
-    const scrollHeight = document.documentElement.scrollHeight;
-    const clientHeight = document.documentElement.clientHeight;
-
-    // 스크롤이 하단에서 100px 이내에 도달하면 더 로드
-    if (scrollTop + clientHeight >= scrollHeight - 100) {
-      fetchCourses(false); // 더 많은 데이터 로드
-    }
-  };
-
   useEffect(() => {
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [loadingMore, hasMore, offset]);
+    const target = loadMoreRef.current;
+    if (!target) return;
+
+    const observer = new IntersectionObserver((entries) => {
+      const entry = entries[0];
+      if (entry.isIntersecting && hasMore && !loading && !loadingMore) {
+        fetchCourses();
+      }
+    }, {
+      root: null,
+      rootMargin: '200px',
+      threshold: 0
+    });
+
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [fetchCourses, hasMore, loading, loadingMore]);
 
   const CourseCard = ({ course }) => (
     <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200 p-6 border border-gray-200">
@@ -451,6 +442,8 @@ const CoursesPage = () => {
         </div>
       )}
 
+      <div ref={loadMoreRef} className="h-1" aria-hidden="true"></div>
+
       {/* 더 로딩 인디케이터 */}
       {loadingMore && (
         <div className="flex items-center justify-center py-8">
@@ -460,7 +453,7 @@ const CoursesPage = () => {
       )}
 
       {/* 더 이상 로드할 데이터가 없을 때 */}
-      {!hasMore && filteredCourses.length > 0 && (
+      {!loading && !loadingMore && !hasMore && filteredCourses.length > 0 && (
         <div className="text-center py-8 text-gray-500">
           <BookOpen className="w-8 h-8 mx-auto mb-2" />
           <p>모든 강의를 불러왔습니다.</p>

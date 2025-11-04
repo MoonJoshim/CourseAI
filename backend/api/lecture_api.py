@@ -11,6 +11,8 @@ import os
 from dotenv import load_dotenv
 import sys
 import os
+from pathlib import Path
+import pandas as pd
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 
 from selenium import webdriver
@@ -37,6 +39,116 @@ global_driver = None
 login_time = None
 SESSION_TIMEOUT = 30 * 60  # 30분 (초 단위)
 cached_search_results = {}  # 검색 결과 캐시
+
+SOFTWARE_COURSES_CACHE = None
+SOFTWARE_COURSES_CACHE_TS = 0
+SOFTWARE_COURSES_SOURCE = Path(__file__).resolve().parents[2] / 'course' / '2025-2.xlsx'
+
+
+def _clean_string(value):
+    if pd.isna(value):
+        return ''
+    if isinstance(value, str):
+        return value.strip()
+    if isinstance(value, float):
+        if value.is_integer():
+            return str(int(value))
+        return str(value).strip()
+    return str(value).strip()
+
+
+def _clean_number(value, fallback=0):
+    if pd.isna(value):
+        return fallback
+    try:
+        return int(value)
+    except (ValueError, TypeError):
+        try:
+            return float(value)
+        except (ValueError, TypeError):
+            return fallback
+
+
+def load_software_courses_from_excel(force_reload: bool = False):
+    """엑셀 파일에서 소프트웨어학과 과목 데이터를 로드"""
+    global SOFTWARE_COURSES_CACHE, SOFTWARE_COURSES_CACHE_TS
+
+    if not force_reload and SOFTWARE_COURSES_CACHE is not None:
+        return SOFTWARE_COURSES_CACHE
+
+    if not SOFTWARE_COURSES_SOURCE.exists():
+        raise FileNotFoundError(f"엑셀 파일을 찾을 수 없습니다: {SOFTWARE_COURSES_SOURCE}")
+
+    df = pd.read_excel(SOFTWARE_COURSES_SOURCE, header=1)
+    if '과목명' not in df.columns:
+        raise ValueError('엑셀 파일 형식이 예상과 다릅니다. (과목명 열이 없음)')
+
+    df = df[df['과목명'].notna()].copy()
+
+    if '소속' in df.columns:
+        df = df[df['소속'] == '소프트웨어학과']
+    elif '개설\n전공' in df.columns:
+        df = df[df['개설\n전공'].fillna('').str.contains('소프트웨어', na=False)]
+
+    df.fillna('', inplace=True)
+
+    courses = []
+    for _, row in df.iterrows():
+        course = {
+            'course_id': _clean_string(row.get('과목\nID') or row.get('수강\n번호')),
+            'course_name': _clean_string(row.get('과목명')),
+            'course_code': _clean_string(row.get('교과목\n코드')),
+            'professor': _clean_string(row.get('담당\n교수')),
+            'department': _clean_string(row.get('소속') or row.get('개설\n전공')),
+            'major': _clean_string(row.get('개설\n전공')),
+            'semester': '2025-2',
+            'credits': _clean_number(row.get('학점'), 0),
+            'hours': _clean_number(row.get('시간'), 0),
+            'course_type': _clean_string(row.get('학수\n구분')),
+            'subject_type': _clean_string(row.get('교과\n구분')),
+            'lecture_time': _clean_string(row.get('강의\n시간명')),
+            'lecture_method': _clean_string(row.get('분반별\n수업\n방식') or row.get('수업\n방식')),
+            'class_method': _clean_string(row.get('수업\n방식')),
+            'class_type': _clean_string(row.get('분반별\n수업\n방법') or row.get('과목\n특성')),
+            'course_characteristics': _clean_string(row.get('과목\n특성')),
+            'course_english_name': _clean_string(row.get('과목\n영문명')),
+            'target_grade': _clean_string(row.get('수강\n대상\n학년')),
+            'average_rating': 0.0,
+            'rating': 0.0,
+            'total_reviews': 0,
+            'reviews': [],
+            'details': {
+                'lecture_method': _clean_string(row.get('분반별\n수업\n방식') or row.get('수업\n방식')),
+                'room': '',
+                'time_slot': _clean_string(row.get('강의\n시간명')),
+                'assignment': '정보 없음',
+                'attendance': '정보 없음',
+                'exam': '정보 없음',
+                'team_project': '정보 없음',
+                'credits': _clean_number(row.get('학점'), 0),
+            },
+            'ai_summary': '',
+            'keywords': list({
+                _clean_string(row.get('과목명')),
+                _clean_string(row.get('담당\n교수')),
+                _clean_string(row.get('교과목\n코드'))
+            } - {''}),
+            'tags': ['2025-2학기', '소프트웨어학과'],
+            'popularity_score': 50.0,
+            'trend_direction': 'stable',
+            'source': 'excel_2025_2'
+        }
+
+        # course_id가 비어 있는 경우 course_code로 대체
+        if not course['course_id']:
+            course['course_id'] = course['course_code'] or course['course_name']
+
+        courses.append(course)
+
+    SOFTWARE_COURSES_CACHE = courses
+    SOFTWARE_COURSES_CACHE_TS = time.time()
+    print(f"✅ 소프트웨어학과 과목 {len(courses)}개 로드 (엑셀)")
+    return SOFTWARE_COURSES_CACHE
 
 # 샘플 데이터 (실제 크롤링 실패 시 사용)
 SAMPLE_COURSES = [
@@ -1149,6 +1261,51 @@ def api_search():
         'results': results,
         'count': len(results)
     })
+
+
+@app.route('/api/software-courses', methods=['GET'])
+def api_software_courses():
+    """엑셀에서 소프트웨어학과 과목 목록 반환"""
+    keyword = request.args.get('keyword', '').strip()
+    limit = int(request.args.get('limit', 50))
+    offset = int(request.args.get('offset', 0))
+    force_reload = request.args.get('refresh', 'false').lower() == 'true'
+
+    try:
+        courses = load_software_courses_from_excel(force_reload=force_reload)
+    except FileNotFoundError as e:
+        print(f"❌ 소프트웨어 과목 데이터 파일 없음: {e}")
+        return jsonify({'error': 'course_file_not_found', 'message': str(e)}), 404
+    except Exception as e:
+        print(f"❌ 소프트웨어 과목 로드 오류: {e}")
+        return jsonify({'error': 'course_load_failed', 'message': str(e)}), 500
+
+    filtered = courses
+    if keyword:
+        keyword_lower = keyword.lower()
+        filtered = [
+            course for course in courses
+            if any(
+                keyword_lower in (course.get(field, '') or '').lower()
+                for field in ('course_name', 'professor', 'course_code', 'course_english_name')
+            )
+        ]
+
+    total_count = len(filtered)
+    results = filtered[offset:offset + limit]
+    has_more = (offset + len(results)) < total_count
+
+    return jsonify({
+        'keyword': keyword,
+        'results': results,
+        'count': len(results),
+        'total_count': total_count,
+        'has_more': has_more,
+        'offset': offset,
+        'limit': limit,
+        'source': 'excel_2025_2'
+    })
+
 
 @app.route('/')
 def index():
