@@ -1,0 +1,43 @@
+flowchart TD
+  E1[.env\nEVERYTIME_ID,\nEVERYTIME_PASSWORD] --> C0[EverytimeCrawler.__init__]
+  C0 --> C1{headless?}
+  C1 --> C2[ChromeOptions 구성]
+  C2 --> C3[webdriver-manager로\nChromeDriver 설치]
+  C3 --> C4[Selenium WebDriver 생성]
+  C0 --> C5[requests.Session]
+
+  subgraph Login [로그인]
+    C4 --> L1[login 페이지로 이동]
+    L1 --> L2[아이디/비번 입력 후 제출]
+    L2 --> L3{리다이렉트 성공?}
+    L3 -->|Yes| L4[로그인 세션 유지]
+    L3 -->|No| L5[로그 실패 로깅]
+  end
+
+  subgraph Crawl [수집]
+    L4 --> G1[get_course_list 실행, lecture 페이지 이동]
+    G1 --> G2[BeautifulSoup 파싱\nlecture-item 반복]
+    G2 --> G3[강의 리스트 반환]
+
+    L4 --> R1[get_course_reviews 실행]
+    R1 --> R2[BeautifulSoup 파싱\nreview-item 반복]
+    R2 --> R3[리뷰 리스트 반환]
+  end
+
+  subgraph Persist [저장/종료]
+    G3 --> S1[save_to_csv 실행]
+    R3 --> S1
+    S1 --> S2[data/ 폴더 CSV]
+    C4 --> X1[close 및 컨텍스트 종료]
+  end
+
+  subgraph Log [로깅]
+    C0 --> LG[loguru logger]
+    L1 --> LG
+    G1 --> LG
+    R1 --> LG
+    S1 --> LG
+    X1 --> LG
+  end
+
+

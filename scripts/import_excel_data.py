@@ -7,19 +7,25 @@ import pandas as pd
 import sys
 import os
 from datetime import datetime
-import json
+from pathlib import Path
 
 # 프로젝트 루트 경로 추가
-sys.path.append(os.path.join(os.path.dirname(__file__)))
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+sys.path.append(str(PROJECT_ROOT))
 
 from backend.api import get_mongo_db
+
+COURSE_FILE = PROJECT_ROOT / "course" / "2025-2.xlsx"
 
 def clean_excel_data():
     """Excel 파일에서 강의 데이터를 정리"""
     print("📊 Excel 파일 읽는 중...")
     
+    if not COURSE_FILE.exists():
+        raise FileNotFoundError(f"강의 데이터 파일을 찾을 수 없습니다: {COURSE_FILE}")
+
     # Excel 파일 읽기
-    df = pd.read_excel('/Users/choyejin/Desktop/crawller/course/2025-2.xlsx')
+    df = pd.read_excel(COURSE_FILE)
     
     # 첫 번째 행은 제목이므로 제거하고, 두 번째 행을 컬럼명으로 사용
     df_clean = df.iloc[2:].copy()  # 3번째 행부터 데이터
