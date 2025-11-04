@@ -1,0 +1,65 @@
+flowchart LR
+  subgraph Frontend [React Frontend]
+    F1[NavBar] --> F2[CoursesPage]
+    F1 --> F3[SearchPage]
+    F1 --> F4[DetailPage]
+    F1 --> F5[RecommendPage]
+    F1 --> F6[TrendsPage]
+    F1 --> F7[GPAPage]
+    F1 --> F8[ProfilePage]
+  end
+
+  subgraph Backend [Python Backend]
+    A1[api/lecture_api.py\n강의/리뷰/검색 API]
+    A2[api/ai_api.py\nLLM/추천/QA API]
+    A3[models/*\ncourse, user, chat, analytics]
+    A4[models/database.py\nMongoDB 연결]
+    A5[models/vector_store.py\n벡터스토어]
+  end
+
+  subgraph DataPipeline [데이터 파이프라인]
+    P1[scripts/import_excel_data.py\n교과목 엑셀 적재]
+    P2[scripts/upload_reviews_to_pinecone.py\n리뷰 임베딩 업서트]
+    P3[pipeline/upsert_mock.py\nMock 업서트]
+    P4[pipeline/query_mock.py\nMock 쿼리]
+  end
+
+  subgraph Crawler [Everytime Crawler]
+    C1[backend/crawler/evertime_crawler.py]
+  end
+
+  subgraph Storage [데이터 저장소]
+    S1[(MongoDB)]
+    S2[(Vector Store)]
+    S3[(CSV/JSON\ncourse_data.json)]
+  end
+
+  subgraph Observability [로깅]
+    L1[logs/api.log]
+    L2[logs/ai_api.log]
+  end
+
+  F2 -->|REST/JSON| A1
+  F3 -->|REST/JSON| A1
+  F4 -->|REST/JSON| A1
+  F5 -->|REST/JSON| A2
+  F6 -->|REST/JSON| A1
+  F7 -->|REST/JSON| A1
+  F8 -->|REST/JSON| A1
+
+  A1 --> A4 --> S1
+  A2 --> A5 --> S2
+  A2 --> A4
+
+  C1 -->|리뷰/강의 수집| S1
+  C1 -->|백업/임시| S3
+
+  P1 --> S1
+  P2 --> S2
+  P3 --> S2
+  P4 --> A2
+
+  A1 --> L1
+  A2 --> L2
+
+
