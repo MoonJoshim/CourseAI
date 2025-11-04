@@ -12,7 +12,7 @@ const ChatPage = () => {
   ]);
   const [inputMessage, setInputMessage] = useState('');
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!inputMessage.trim()) return;
 
     // 사용자 메시지 추가
@@ -23,16 +23,47 @@ const ChatPage = () => {
       timestamp: new Date()
     };
 
-    // AI 응답 시뮬레이션
-    const aiResponse = {
-      id: messages.length + 2,
-      type: 'assistant',
-      content: `"${inputMessage}"에 대한 답변입니다. 실제로는 AI API와 연동되어 강의 정보를 분석하고 답변을 제공합니다.`,
-      timestamp: new Date()
-    };
-
-    setMessages([...messages, userMessage, aiResponse]);
+    // 즉시 사용자 메시지를 반영
+    setMessages(prev => [...prev, userMessage]);
+    const currentInput = inputMessage;
     setInputMessage('');
+
+    try {
+      const host = window.location.hostname;
+      const url = `http://${host}:5003/api/chat`;
+      const history = messages
+        .filter(m => m.type === 'user' || m.type === 'assistant')
+        .reduce((acc, m, idx, arr) => {
+          if (m.type === 'user') {
+            const next = arr[idx + 1];
+            acc.push({ user: m.content, assistant: next && next.type === 'assistant' ? next.content : '' });
+          }
+          return acc;
+        }, []);
+
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: currentInput, history })
+      });
+      const data = await res.json();
+      const text = data.response || data.error || '응답을 불러오지 못했습니다.';
+      const aiResponse = {
+        id: Date.now(),
+        type: 'assistant',
+        content: text,
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, aiResponse]);
+    } catch (e) {
+      const aiResponse = {
+        id: Date.now(),
+        type: 'assistant',
+        content: '서버와 통신 중 오류가 발생했어요. 잠시 후 다시 시도해주세요.',
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, aiResponse]);
+    }
   };
 
   const quickQuestions = [
