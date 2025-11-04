@@ -62,6 +62,7 @@ data/
 # 로그 파일
 *.log
 logs/
+mongodb-data/
 
 # macOS 관련
 .DS_Store
