@@ -13,8 +13,6 @@ const ChatPage = () => {
   const [inputMessage, setInputMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
 
-  const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:5003';
-
   const handleSendMessage = async () => {
     if (!inputMessage.trim()) return;
 
@@ -26,62 +24,46 @@ const ChatPage = () => {
       timestamp: new Date()
     };
 
-    // 기존 대화 히스토리를 API가 요구하는 형태로 변환
-    const historyForApi = messages
-      .filter(m => m.type === 'user' || m.type === 'assistant')
-      .reduce((acc, m) => {
-        const last = acc[acc.length - 1];
-        if (m.type === 'user') {
-          acc.push({ user: m.content, assistant: '' });
-        } else {
-          if (last && !last.assistant) {
-            last.assistant = m.content;
-          } else {
-            acc.push({ user: '', assistant: m.content });
-          }
-        }
-        return acc;
-      }, []);
-
+    // 즉시 사용자 메시지를 반영
     setMessages(prev => [...prev, userMessage]);
+    const currentInput = inputMessage;
     setInputMessage('');
 
     try {
-      setIsSending(true);
-      const res = await fetch(`${API_BASE}/api/chat`, {
+      const host = window.location.hostname;
+      const url = `http://${host}:5003/api/chat`;
+      const history = messages
+        .filter(m => m.type === 'user' || m.type === 'assistant')
+        .reduce((acc, m, idx, arr) => {
+          if (m.type === 'user') {
+            const next = arr[idx + 1];
+            acc.push({ user: m.content, assistant: next && next.type === 'assistant' ? next.content : '' });
+          }
+          return acc;
+        }, []);
+
+      const res = await fetch(url, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          message: userMessage.content,
-          history: historyForApi
-        })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: currentInput, history })
       });
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || `API 오류 (status ${res.status})`);
-      }
-
       const data = await res.json();
-      const assistantMessage = {
-        id: userMessage.id + 1,
+      const text = data.response || data.error || '응답을 불러오지 못했습니다.';
+      const aiResponse = {
+        id: Date.now(),
         type: 'assistant',
-        content: data.response || '응답이 비어 있습니다.',
+        content: text,
         timestamp: new Date()
       };
-      setMessages(prev => [...prev, assistantMessage]);
+      setMessages(prev => [...prev, aiResponse]);
     } catch (e) {
-      const errorMessage = {
-        id: userMessage.id + 1,
+      const aiResponse = {
+        id: Date.now(),
         type: 'assistant',
-        content: `요청 중 오류가 발생했어요: ${e.message}`,
+        content: '서버와 통신 중 오류가 발생했어요. 잠시 후 다시 시도해주세요.',
         timestamp: new Date()
       };
-      setMessages(prev => [...prev, errorMessage]);
-    } finally {
-      setIsSending(false);
+      setMessages(prev => [...prev, aiResponse]);
     }
   };
 
