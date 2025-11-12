@@ -178,7 +178,7 @@ def execute_curl_command(curl_command: str) -> dict:
             print(f"   응답 내용: {result.stdout[:200]}...")
         raise
 
-def create_review_items(api_response_data: dict, course_info: dict) -> list:
+def create_review_items(api_response_data: dict, course_info: dict, vector_store: VectorStore) -> list:
     """
     API 응답 데이터를 Pinecone 저장 형식으로 변환
     articles에서 id, year, semester, text, rate만 추출
@@ -186,6 +186,7 @@ def create_review_items(api_response_data: dict, course_info: dict) -> list:
     Args:
         api_response_data: 에브리타임 API 응답 데이터
         course_info: 강의 정보 (course_name, professor 필수)
+        vector_store: VectorStore 인스턴스 (sanitize_id 사용을 위해)
     
     Returns:
         list: Pinecone 저장용 리뷰 아이템 리스트
@@ -208,17 +209,26 @@ def create_review_items(api_response_data: dict, course_info: dict) -> list:
             print(f"⚠️  {idx}번째 article에서 필수 필드 누락, 건너뜀")
             continue
         
-        # 벡터 ID를 ASCII-safe로 생성
-        course_name_ascii = korean_to_ascii(course_info['course_name'])
-        professor_ascii = korean_to_ascii(course_info['professor'])
-        review_id = f"{course_name_ascii}_{professor_ascii}_{article_id}"
+        # 텍스트가 비어있으면 건너뜀 (벡터화 불가)
+        if not text or not text.strip():
+            print(f"⚠️  {idx}번째 article에서 텍스트가 비어있음, 건너뜀")
+            continue
+        
+        # 벡터 ID를 ASCII-safe로 생성 (MD5 해시 사용)
+        course_name_hash = vector_store.sanitize_id(course_info['course_name'])
+        professor_hash = vector_store.sanitize_id(course_info['professor'])
+        review_id = f"{course_name_hash}_{professor_hash}_{article_id}"
         
         # 학기 정보 정규화
         semester_normalized = f"{year}-{semester}"
-        if semester == "여름":
+        if semester == "여름" or semester == "summer":
             semester_normalized = f"{year}-summer"
-        elif semester == "겨울":
+        elif semester == "겨울" or semester == "winter":
             semester_normalized = f"{year}-winter"
+        elif semester == "1" or semester == 1:
+            semester_normalized = f"{year}-1"
+        elif semester == "2" or semester == 2:
+            semester_normalized = f"{year}-2"
         
         # 메타데이터 구성 (필수 필드만 포함)
         metadata = {
@@ -291,7 +301,7 @@ def main():
         
         # API 응답 데이터 변환
         print("\n🔄 강의평 데이터 변환 중...")
-        review_items = create_review_items(api_response_data, course_info)
+        review_items = create_review_items(api_response_data, course_info, vector_store)
         print(f"✅ {len(review_items)}개 강의평 데이터 변환 완료")
         
         # Pinecone에 업로드
