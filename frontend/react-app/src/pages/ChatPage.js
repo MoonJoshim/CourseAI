@@ -11,6 +11,7 @@ const ChatPage = () => {
     }
   ]);
   const [inputMessage, setInputMessage] = useState('');
+  const [isSending, setIsSending] = useState(false);
 
   const handleSendMessage = async () => {
     if (!inputMessage.trim()) return;
@@ -161,11 +162,11 @@ const ChatPage = () => {
           </div>
           <button
             onClick={handleSendMessage}
-            disabled={!inputMessage.trim()}
+            disabled={!inputMessage.trim() || isSending}
             className="px-6 py-3 bg-sky-600 hover:bg-sky-700 disabled:bg-slate-300 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
           >
             <Send className="w-4 h-4" />
-            전송
+            {isSending ? '전송 중...' : '전송'}
           </button>
         </div>
       </div>
