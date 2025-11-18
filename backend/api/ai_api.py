@@ -16,6 +16,13 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 
 from backend.api import get_mongo_db
 from backend.api.lecture_api import search_lecture, get_or_create_driver, ensure_logged_in
+# VectorStore를 직접 파일 경로로 import하여 __init__.py의 database 초기화를 피함
+import importlib.util
+vector_store_path = os.path.join(os.path.dirname(__file__), '..', 'models', 'vector_store.py')
+spec = importlib.util.spec_from_file_location("vector_store", vector_store_path)
+vector_store_module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(vector_store_module)
+VectorStore = vector_store_module.VectorStore
 
 # 환경변수 로드
 load_dotenv()

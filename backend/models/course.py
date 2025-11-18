@@ -3,8 +3,8 @@
 """
 
 from datetime import datetime
-from typing import List, Optional, Dict, Any
-from pydantic import BaseModel, Field
+from typing import List, Optional, Dict, Any, Union
+from pydantic import BaseModel, Field, ConfigDict
 from bson import ObjectId
 
 
@@ -23,13 +23,13 @@ class Review(BaseModel):
     difficulty_level: Optional[int] = Field(None, ge=1, le=5, description="난이도 (1-5)")
     workload_level: Optional[int] = Field(None, ge=1, le=5, description="과제량 (1-5)")
     
-    class Config:
-        json_encoders = {
+    model_config = ConfigDict(
+        populate_by_name=True,
+        json_encoders={
             datetime: lambda v: v.isoformat(),
             ObjectId: str
         }
-        validate_by_name = True
-        populate_by_name = True
+    )
 
 
 class CourseDetails(BaseModel):
@@ -45,7 +45,7 @@ class CourseDetails(BaseModel):
 
 class Course(BaseModel):
     """강의 모델"""
-    id: Optional[ObjectId] = Field(None, alias="_id")
+    id: Optional[Union[str, ObjectId]] = Field(None, alias="_id")
     course_id: str = Field(..., description="강의 고유 ID (예: SW101)")
     course_name: str = Field(..., description="강의명")
     professor: str = Field(..., description="교수명")
@@ -76,13 +76,14 @@ class Course(BaseModel):
     last_crawled_at: Optional[datetime] = Field(None, description="마지막 크롤링일")
     source: str = Field(default="evertime", description="데이터 출처")
     
-    class Config:
-        json_encoders = {
+    model_config = ConfigDict(
+        populate_by_name=True,
+        arbitrary_types_allowed=True,
+        json_encoders={
             datetime: lambda v: v.isoformat(),
             ObjectId: str
         }
-        validate_by_name = True
-        populate_by_name = True
+    )
 
 
 class CourseSearchResult(BaseModel):
@@ -92,10 +93,10 @@ class CourseSearchResult(BaseModel):
     total_count: int = Field(..., description="총 결과 수")
     search_time: datetime = Field(default_factory=datetime.now, description="검색 시간")
     
-    class Config:
-        json_encoders = {
+    model_config = ConfigDict(
+        populate_by_name=True,
+        json_encoders={
             datetime: lambda v: v.isoformat(),
             ObjectId: str
         }
-        validate_by_name = True
-        populate_by_name = True
+    )

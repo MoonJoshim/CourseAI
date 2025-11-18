@@ -3,8 +3,8 @@
 """
 
 from datetime import datetime
-from typing import List, Optional, Dict, Any
-from pydantic import BaseModel, Field
+from typing import List, Optional, Dict, Any, Union
+from pydantic import BaseModel, Field, ConfigDict
 from bson import ObjectId
 from enum import Enum
 
@@ -32,17 +32,18 @@ class Message(BaseModel):
     tokens_used: Optional[int] = Field(None, description="사용된 토큰 수")
     model_used: Optional[str] = Field(None, description="사용된 모델")
     
-    class Config:
-        json_encoders = {
+    model_config = ConfigDict(
+        populate_by_name=True,
+        json_encoders={
             datetime: lambda v: v.isoformat(),
             ObjectId: str
         }
-        validate_by_name = True
+    )
 
 
 class Conversation(BaseModel):
     """대화 세션 모델"""
-    _id: Optional[ObjectId] = Field(None, alias="_id")
+    id: Optional[Union[str, ObjectId]] = Field(None, alias="_id")
     session_id: str = Field(..., description="세션 고유 ID")
     user_id: Optional[str] = Field(None, description="사용자 ID (익명 사용자용)")
     
@@ -65,13 +66,14 @@ class Conversation(BaseModel):
     updated_at: datetime = Field(default_factory=datetime.now, description="수정일")
     last_activity: datetime = Field(default_factory=datetime.now, description="마지막 활동일")
     
-    class Config:
-        json_encoders = {
+    model_config = ConfigDict(
+        populate_by_name=True,
+        arbitrary_types_allowed=True,
+        json_encoders={
             datetime: lambda v: v.isoformat(),
             ObjectId: str
         }
-        validate_by_name = True
-        allow_population_by_field_name = True
+    )
 
 
 class ChatRequest(BaseModel):
@@ -101,9 +103,10 @@ class ChatResponse(BaseModel):
     model_used: Optional[str] = Field(None, description="사용된 모델")
     response_time_ms: Optional[int] = Field(None, description="응답 시간 (밀리초)")
     
-    class Config:
-        json_encoders = {
+    model_config = ConfigDict(
+        populate_by_name=True,
+        json_encoders={
             datetime: lambda v: v.isoformat(),
             ObjectId: str
         }
-        validate_by_name = True
+    )
