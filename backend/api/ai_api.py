@@ -12,7 +12,6 @@ import sys
 from dotenv import load_dotenv
 from datetime import datetime
 from typing import List, Dict, Optional
-import google.generativeai as genai
 # 프로젝트 루트 경로 추가
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 
@@ -372,6 +371,76 @@ def chat_with_gemini(user_message, conversation_history):
 
 # ========== RAG 관련 함수들 ==========
 
+def extract_course_name_from_message(user_message: str) -> Optional[str]:
+    """사용자 메시지에서 강의명 추출 (키워드 매칭 + Pinecone에서 실제 강의명 확인)"""
+    # 일반적인 강의명 키워드 (Pinecone에 저장된 실제 강의명과 매핑)
+    course_keyword_map = {
+        # 키워드 -> 실제 저장된 강의명
+        '인공지능': '인공지능',
+        'AI': '인공지능',
+        '기계학습': '기계학습',
+        '머신러닝': '기계학습',  # 머신러닝은 기계학습과 동일하게 처리
+        'machine learning': '기계학습',
+        '데이터베이스': '데이터베이스',
+        'DB': '데이터베이스',
+        'database': '데이터베이스',
+        '웹프로그래밍': '웹프로그래밍',
+        '웹프로': '웹프로그래밍',
+        '웹': '웹프로그래밍',
+        '모바일프로그래밍': '모바일프로그래밍',
+        '모바일프로': '모바일프로그래밍',
+        '모바일': '모바일프로그래밍',
+        '알고리즘': '알고리즘',
+        '자료구조': '자료구조',
+        '컴퓨터구조': '컴퓨터구조',
+        '운영체제': '운영체제',
+        'OS': '운영체제',
+        '네트워크': '네트워크',
+        '소프트웨어공학': '소프트웨어공학',
+        '소공': '소프트웨어공학',
+        '객체지향': '객체지향',
+    }
+    
+    user_message_lower = user_message.lower()
+    
+    # 키워드 매칭 (더 긴 키워드 우선)
+    course_keywords_sorted = sorted(course_keyword_map.keys(), key=len, reverse=True)
+    
+    for keyword in course_keywords_sorted:
+        if keyword in user_message or keyword.lower() in user_message_lower:
+            # 실제 저장된 강의명 반환
+            actual_course_name = course_keyword_map[keyword]
+            print(f"   키워드 '{keyword}' -> 강의명 '{actual_course_name}' 매핑")
+            return actual_course_name
+    
+    # Pinecone에서 실제 강의명 목록을 가져와서 더 정확한 매칭 시도
+    if vector_store:
+        try:
+            # Pinecone에서 모든 강의명 조회 (샘플링)
+            results = vector_store.index.query(
+                vector=[0.0] * 768,
+                top_k=100,  # 샘플링
+                include_metadata=True,
+                namespace=None
+            )
+            
+            # 고유한 강의명 수집
+            unique_course_names = set()
+            for match in results.matches:
+                metadata = match.metadata
+                if 'course_name' in metadata:
+                    unique_course_names.add(metadata['course_name'])
+            
+            # 사용자 메시지와 가장 유사한 강의명 찾기
+            for course_name in unique_course_names:
+                if course_name in user_message or course_name.lower() in user_message_lower:
+                    print(f"   Pinecone에서 발견된 강의명: '{course_name}'")
+                    return course_name
+        except Exception as e:
+            print(f"⚠️  Pinecone에서 강의명 조회 실패: {e}")
+    
+    return None
+
 def format_context_from_reviews(reviews: List[Dict]) -> str:
     """검색된 강의평들을 컨텍스트 형식으로 포맷팅"""
     if not reviews:
@@ -402,14 +471,37 @@ def format_context_from_reviews(reviews: List[Dict]) -> str:
     context_parts.append("=== 컨텍스트 끝 ===\n")
     return "\n".join(context_parts)
 
-def chat_with_rag_openai(user_message: str, conversation_history: List[Dict], top_k: int = 5, namespace: Optional[str] = None):
+def chat_with_rag_openai(user_message: str, conversation_history: List[Dict], top_k: int = 5, namespace: Optional[str] = None, filter_course_name: Optional[str] = None):
     """OpenAI를 사용한 RAG 기반 채팅"""
     # 1. 사용자 질문을 벡터화하여 유사한 강의평 검색
     if vector_store:
         # namespace가 None이면 Pinecone이 자동으로 _default_를 사용
         actual_namespace = namespace if namespace else "_default_"
+        
+        # 필터 생성 (강의명이 추출된 경우)
+        filter_dict = None
+        if filter_course_name:
+            filter_dict = {"course_name": {"$eq": filter_course_name}}
+            print(f"🎯 강의명 필터 적용: {filter_course_name}")
+        
         print(f"🔍 Pinecone에서 유사한 강의평 검색 중... (top_k={top_k}, namespace={actual_namespace})")
-        similar_reviews = vector_store.query_similar_reviews(user_message, top_k=top_k, namespace=namespace)
+        similar_reviews = vector_store.query_similar_reviews(
+            user_message, 
+            top_k=top_k, 
+            namespace=namespace,
+            filter_dict=filter_dict
+        )
+        
+        # 필터 적용 시 결과가 없으면 필터 없이 재검색 (fallback)
+        if filter_dict and len(similar_reviews) == 0:
+            print(f"⚠️  필터 적용 시 결과 없음. 필터 없이 재검색...")
+            similar_reviews = vector_store.query_similar_reviews(
+                user_message, 
+                top_k=top_k, 
+                namespace=namespace,
+                filter_dict=None
+            )
+        
         print(f"✅ {len(similar_reviews)}개의 유사한 강의평을 찾았습니다.")
         
         # 컨텍스트 포맷팅
@@ -445,14 +537,37 @@ def chat_with_rag_openai(user_message: str, conversation_history: List[Dict], to
     
     return ai_response, similar_reviews
 
-def chat_with_rag_gemini(user_message: str, conversation_history: List[Dict], top_k: int = 5, namespace: Optional[str] = None):
+def chat_with_rag_gemini(user_message: str, conversation_history: List[Dict], top_k: int = 5, namespace: Optional[str] = None, filter_course_name: Optional[str] = None):
     """Gemini를 사용한 RAG 기반 채팅"""
     # 1. 사용자 질문을 벡터화하여 유사한 강의평 검색
     if vector_store:
         # namespace가 None이면 Pinecone이 자동으로 _default_를 사용
         actual_namespace = namespace if namespace else "_default_"
+        
+        # 필터 생성 (강의명이 추출된 경우)
+        filter_dict = None
+        if filter_course_name:
+            filter_dict = {"course_name": {"$eq": filter_course_name}}
+            print(f"🎯 강의명 필터 적용: {filter_course_name}")
+        
         print(f"🔍 Pinecone에서 유사한 강의평 검색 중... (top_k={top_k}, namespace={actual_namespace})")
-        similar_reviews = vector_store.query_similar_reviews(user_message, top_k=top_k, namespace=namespace)
+        similar_reviews = vector_store.query_similar_reviews(
+            user_message, 
+            top_k=top_k, 
+            namespace=namespace,
+            filter_dict=filter_dict
+        )
+        
+        # 필터 적용 시 결과가 없으면 필터 없이 재검색 (fallback)
+        if filter_dict and len(similar_reviews) == 0:
+            print(f"⚠️  필터 적용 시 결과 없음. 필터 없이 재검색...")
+            similar_reviews = vector_store.query_similar_reviews(
+                user_message, 
+                top_k=top_k, 
+                namespace=namespace,
+                filter_dict=None
+            )
+        
         print(f"✅ {len(similar_reviews)}개의 유사한 강의평을 찾았습니다.")
         
         # 컨텍스트 포맷팅
@@ -499,42 +614,23 @@ def chat():
         print(f"💬 사용자 메시지: {user_message}")
         print(f"🤖 LLM Provider: {LLM_PROVIDER}")
         
-        # 대화 히스토리 구성
-        messages = [{"role": "system", "content": SYSTEM_PROMPT}]
-        
-        # 이전 대화 히스토리 추가 (최근 5개만)
-        for hist in conversation_history[-5:]:
-            messages.append({"role": "user", "content": hist.get("user", "")})
-            messages.append({"role": "assistant", "content": hist.get("assistant", "")})
-        
-        # 현재 사용자 메시지 추가
-        messages.append({"role": "user", "content": user_message})
-        
-        # Gemini API 호출 (단순 대화)
-        model = genai.GenerativeModel("gemini-1.5-flash")
-        # 히스토리를 하나의 프롬프트로 연결
-        history_text = "\n".join([
-            f"사용자: {h.get('user','')}\n어시스턴트: {h.get('assistant','')}" for h in conversation_history[-5:]
-        ])
-        prompt = f"""
-{SYSTEM_PROMPT}
-
-이전 대화(있으면):
-{history_text}
-
-새 사용자 메시지:
-{user_message}
-""".strip()
-
-        gen = model.generate_content(prompt)
-        ai_response = gen.text if hasattr(gen, 'text') else str(gen)
+        # LLM Provider에 따라 다른 함수 호출
+        if LLM_PROVIDER == 'openai':
+            ai_response, _ = chat_with_openai(user_message, conversation_history)
+        elif LLM_PROVIDER == 'gemini':
+            ai_response, _ = chat_with_gemini(user_message, conversation_history)
+        else:
+            return jsonify({'error': f'지원하지 않는 LLM Provider: {LLM_PROVIDER}'}), 400
         
         print(f"🤖 AI 응답: {ai_response[:100]}...")
+        
+        # 모델명 설정
+        model_name = 'gpt-4-1106-preview' if LLM_PROVIDER == 'openai' else 'gemini-2.5-flash'
         
         return jsonify({
             'response': ai_response,
             'timestamp': datetime.now().isoformat(),
-            'model': 'gemini-1.5-flash'
+            'model': model_name
         })
         
     except Exception as e:
@@ -643,11 +739,18 @@ def rag_chat():
         # namespace가 None이면 Pinecone이 자동으로 _default_를 사용
         print(f"📦 Namespace: {namespace if namespace else '_default_ (자동)'}")
         
+        # 사용자 메시지에서 강의명 추출 (필터링용)
+        extracted_course_name = extract_course_name_from_message(user_message)
+        if extracted_course_name:
+            print(f"📌 추출된 강의명: {extracted_course_name} (필터 적용)")
+        else:
+            print(f"📌 강의명 추출 실패 (전체 검색)")
+        
         # LLM Provider에 따라 다른 함수 호출
         if LLM_PROVIDER == 'openai':
-            ai_response, similar_reviews = chat_with_rag_openai(user_message, conversation_history, top_k, namespace)
+            ai_response, similar_reviews = chat_with_rag_openai(user_message, conversation_history, top_k, namespace, filter_course_name=extracted_course_name)
         elif LLM_PROVIDER == 'gemini':
-            ai_response, similar_reviews = chat_with_rag_gemini(user_message, conversation_history, top_k, namespace)
+            ai_response, similar_reviews = chat_with_rag_gemini(user_message, conversation_history, top_k, namespace, filter_course_name=extracted_course_name)
         else:
             return jsonify({'error': f'지원하지 않는 LLM Provider: {LLM_PROVIDER}'}), 400
         
