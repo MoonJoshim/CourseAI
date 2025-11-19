@@ -1,6 +1,6 @@
 import React from 'react';
 import { 
-  Search, BookOpen, TrendingUp, Award, Calculator, Brain, Bell, User, MessageSquare, List
+  Search, Award, Calculator, Brain, Bell, User, MessageSquare, List
 } from 'lucide-react';
 
 const NavBar = ({ currentPage, setCurrentPage, mockUserProfile }) => {
@@ -26,7 +26,6 @@ const NavBar = ({ currentPage, setCurrentPage, mockUserProfile }) => {
               { id: 'search', label: 'AI 강의 검색', icon: Search },
               { id: 'courses', label: '개설과목 현황', icon: List },
               { id: 'chat', label: 'AI 채팅', icon: MessageSquare },
-              { id: 'trends', label: '트렌드 분석', icon: TrendingUp },
               { id: 'recommend', label: '맞춤 추천', icon: Award },
               { id: 'gpa', label: '학점 계산', icon: Calculator }
             ].map(tab => {

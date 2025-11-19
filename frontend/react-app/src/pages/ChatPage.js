@@ -1,5 +1,25 @@
-import React, { useState } from 'react';
-import { MessageSquare, Send, User, Brain } from 'lucide-react';
+import React, { useState, useMemo, useRef } from 'react';
+import { MessageSquare, Send, User, Brain, Zap, Info, PauseCircle } from 'lucide-react';
+
+const DEFAULT_CHAT_MODE = (process.env.REACT_APP_AI_CHAT_MODE || 'chat').toLowerCase();
+const CHAT_ENDPOINTS = {
+  chat: '/api/chat',
+  rag: '/api/rag/chat',
+};
+const DEFAULT_ENDPOINT =
+  CHAT_ENDPOINTS[DEFAULT_CHAT_MODE] || CHAT_ENDPOINTS.chat;
+const API_BASE =
+  (process.env.REACT_APP_AI_API_BASE_URL || '').replace(/\/$/, '') ||
+  `${window.location.protocol}//${window.location.hostname}:5003`;
+const REQUEST_TIMEOUT = Number(process.env.REACT_APP_AI_API_TIMEOUT || 20000);
+const DEFAULT_TOP_K = Number(process.env.REACT_APP_AI_RAG_TOP_K || 5);
+
+const formatTimestamp = (date) =>
+  new Intl.DateTimeFormat('ko-KR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  }).format(date);
 
 const ChatPage = () => {
   const [messages, setMessages] = useState([
@@ -12,9 +32,14 @@ const ChatPage = () => {
   ]);
   const [inputMessage, setInputMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [mode, setMode] = useState(
+    CHAT_ENDPOINTS[DEFAULT_CHAT_MODE] ? DEFAULT_CHAT_MODE : 'chat'
+  );
+  const abortControllerRef = useRef(null);
 
   const handleSendMessage = async () => {
     if (!inputMessage.trim()) return;
+    if (isSending) return;
 
     // 사용자 메시지 추가
     const userMessage = {
@@ -29,31 +54,66 @@ const ChatPage = () => {
     const currentInput = inputMessage;
     setInputMessage('');
 
-    try {
-      const host = window.location.hostname;
-      const url = `http://${host}:5003/api/chat`;
-      const history = messages
-        .filter(m => m.type === 'user' || m.type === 'assistant')
-        .reduce((acc, m, idx, arr) => {
-          if (m.type === 'user') {
-            const next = arr[idx + 1];
-            acc.push({ user: m.content, assistant: next && next.type === 'assistant' ? next.content : '' });
-          }
-          return acc;
-        }, []);
+    const history = messages
+      .filter((m) => m.type === 'user' || m.type === 'assistant')
+      .reduce((acc, m, idx, arr) => {
+        if (m.type === 'user') {
+          const next = arr[idx + 1];
+          acc.push({
+            user: m.content,
+            assistant:
+              next && next.type === 'assistant' ? next.content : '',
+          });
+        }
+        return acc;
+      }, []);
 
-      const res = await fetch(url, {
+    const endpoint = `${
+      API_BASE || `${window.location.protocol}//${window.location.hostname}:5003`
+    }${CHAT_ENDPOINTS[mode] || DEFAULT_ENDPOINT}`;
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+    abortControllerRef.current = controller;
+
+    try {
+      setIsSending(true);
+
+      const payload =
+        mode === 'rag'
+          ? { message: currentInput, history, top_k: DEFAULT_TOP_K }
+          : { message: currentInput, history };
+
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: currentInput, history })
+        body: JSON.stringify(payload),
+        signal: controller.signal,
       });
+
+      if (!res.ok) {
+        const errorPayload = await res.json().catch(() => ({}));
+        throw new Error(errorPayload.error || res.statusText);
+      }
+
       const data = await res.json();
-      const text = data.response || data.error || '응답을 불러오지 못했습니다.';
+
+      const text =
+        data.response ||
+        data.ai_response ||
+        data.error ||
+        '응답을 불러오지 못했습니다.';
+
       const aiResponse = {
         id: Date.now(),
         type: 'assistant',
         content: text,
-        timestamp: new Date()
+        timestamp: new Date(),
+        metadata: {
+          provider: data.llm_provider || data.model || 'unknown',
+          ragEnabled: Boolean(data.rag_enabled),
+          topReviews: data.top_reviews || [],
+        },
       };
       setMessages(prev => [...prev, aiResponse]);
     } catch (e) {
@@ -61,9 +121,14 @@ const ChatPage = () => {
         id: Date.now(),
         type: 'assistant',
         content: '서버와 통신 중 오류가 발생했어요. 잠시 후 다시 시도해주세요.',
-        timestamp: new Date()
+        timestamp: new Date(),
+        metadata: { error: e.message }
       };
       setMessages(prev => [...prev, aiResponse]);
+    } finally {
+      clearTimeout(timeoutId);
+      abortControllerRef.current = null;
+      setIsSending(false);
     }
   };
 
@@ -73,6 +138,27 @@ const ChatPage = () => {
     '웹개발 관련 강의 어때?',
     '컴공 전필 중에 쉬운 거는?'
   ];
+
+  const modeOptions = useMemo(
+    () => [
+      { value: 'chat', label: '기본 모드' },
+      { value: 'rag', label: 'RAG 모드' },
+    ],
+    []
+  );
+
+  const handleModeChange = (value) => {
+    if (value === mode) return;
+    setMode(value);
+  };
+
+  const handleAbort = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+      setIsSending(false);
+    }
+  };
 
   return (
     <div className="h-[calc(100vh-200px)] flex flex-col">
@@ -86,6 +172,34 @@ const ChatPage = () => {
             <h2 className="text-lg font-semibold text-slate-800">AI 강의 상담</h2>
             <p className="text-sm text-slate-500">궁금한 강의 정보를 자연어로 물어보세요</p>
           </div>
+        </div>
+      </div>
+
+      {/* Mode Toggle */}
+      <div className="flex items-center justify-between px-4 py-2 bg-slate-50 border-b border-slate-200">
+        <div className="flex items-center gap-2 text-sm text-slate-600">
+          <Info className="w-4 h-4" />
+          <span>
+            {mode === 'rag'
+              ? 'RAG 모드: 강의평 벡터 검색을 사용해 더 정확한 답변을 제공합니다.'
+              : '기본 모드: 최신 AI 모델로 자연스러운 대화를 제공합니다.'}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          {modeOptions.map((option) => (
+            <button
+              key={option.value}
+              onClick={() => handleModeChange(option.value)}
+              className={`px-3 py-1 rounded-full text-sm border transition ${
+                mode === option.value
+                  ? 'bg-sky-600 text-white border-sky-600'
+                  : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-100'
+              }`}
+            >
+              {option.value === 'rag' && <Zap className="inline w-3 h-3 mr-1" />}
+              {option.label}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -109,15 +223,45 @@ const ChatPage = () => {
                 ? 'bg-sky-600 text-white rounded-tr-sm'
                 : 'bg-white border border-slate-200 rounded-tl-sm'
             }`}>
-              <p className={`text-sm leading-relaxed ${
-                message.type === 'user' ? 'text-white' : 'text-slate-800'
-              }`}>
+              <p
+                className={`text-sm leading-relaxed ${
+                  message.type === 'user' ? 'text-white' : 'text-slate-800'
+                } whitespace-pre-line`}
+              >
                 {message.content}
               </p>
-              <p className={`text-xs mt-2 ${
-                message.type === 'user' ? 'text-sky-100' : 'text-slate-500'
-              }`}>
-                {message.timestamp.toLocaleTimeString()}
+              {message.metadata?.topReviews?.length ? (
+                <div className="mt-3 text-xs text-slate-500 space-y-1">
+                  <p className="font-medium text-slate-600">
+                    관련 강의평 근거
+                  </p>
+                  <ul className="list-disc pl-4 space-y-1">
+                    {message.metadata.topReviews.map((review, idx) => (
+                      <li key={`${message.id}-review-${idx}`}>
+                        <span className="font-semibold">{review.course_name}</span>{' '}
+                        ({review.professor || '교수 정보 없음'}) – 평점{' '}
+                        {review.rating ?? 'N/A'} / 유사도 {review.similarity_score}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+              {message.metadata?.provider ? (
+                <p className="text-xs mt-2 text-slate-400">
+                  모델: {message.metadata.provider}
+                </p>
+              ) : null}
+              {message.metadata?.error ? (
+                <p className="text-xs mt-2 text-rose-500">
+                  오류: {message.metadata.error}
+                </p>
+              ) : null}
+              <p
+                className={`text-xs mt-2 ${
+                  message.type === 'user' ? 'text-sky-100' : 'text-slate-500'
+                }`}
+              >
+                {formatTimestamp(message.timestamp)}
               </p>
             </div>
           </div>
@@ -165,8 +309,12 @@ const ChatPage = () => {
             disabled={!inputMessage.trim() || isSending}
             className="px-6 py-3 bg-sky-600 hover:bg-sky-700 disabled:bg-slate-300 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
           >
-            <Send className="w-4 h-4" />
-            {isSending ? '전송 중...' : '전송'}
+            {isSending ? (
+              <PauseCircle className="w-4 h-4" onClick={handleAbort} />
+            ) : (
+              <Send className="w-4 h-4" />
+            )}
+            {isSending ? '응답 대기 중...' : '전송'}
           </button>
         </div>
       </div>

@@ -3,7 +3,6 @@ import NavBar from './components/NavBar';
 import SearchPage from './pages/SearchPage';
 import DetailPage from './pages/DetailPage';
 import ChatPage from './pages/ChatPage';
-import TrendsPage from './pages/TrendsPage';
 import RecommendPage from './pages/RecommendPage';
 import GPAPage from './pages/GPAPage';
 import ProfilePage from './pages/ProfilePage';
@@ -89,13 +88,6 @@ const AICoursePlatform = () => {
     }
   ];
 
-  const mockTrendData = [
-    { course: '웹프로그래밍', change: '+15%', trend: 'up' },
-    { course: '머신러닝', change: '+12%', trend: 'up' },
-    { course: '알고리즘', change: '-5%', trend: 'down' },
-    { course: '운영체제', change: '+8%', trend: 'up' }
-  ];
-
   const mockUserProfile = {
     name: '김학생',
     major: '소프트웨어학과',
@@ -130,12 +122,6 @@ const AICoursePlatform = () => {
           <DetailPage 
             selectedCourse={selectedCourse}
             mockCourses={mockCourses}
-          />
-        );
-      case 'trends':
-        return (
-          <TrendsPage 
-            mockTrendData={mockTrendData}
           />
         );
       case 'recommend':
