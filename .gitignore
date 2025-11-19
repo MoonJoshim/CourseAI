@@ -56,7 +56,12 @@ venv.bak/
 *~
 
 # 크롤링 데이터
+# 기본 크롤링 데이터 폴더 제외
 data/
+
+# 프론트엔드 정적 데이터는 포함
+!frontend/react-app/src/data/
+!frontend/react-app/src/data/*.json
 *.html
 
 # 로그 파일
