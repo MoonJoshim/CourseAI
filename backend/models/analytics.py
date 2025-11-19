@@ -3,14 +3,14 @@
 """
 
 from datetime import datetime
-from typing import List, Optional, Dict, Any
-from pydantic import BaseModel, Field
+from typing import List, Optional, Dict, Any, Union
+from pydantic import BaseModel, Field, ConfigDict
 from bson import ObjectId
 
 
 class SearchAnalytics(BaseModel):
     """검색 분석 모델"""
-    _id: Optional[ObjectId] = Field(None, alias="_id")
+    id: Optional[Union[str, ObjectId]] = Field(None, alias="_id")
     date: datetime = Field(..., description="분석 날짜")
     
     # 검색 통계
@@ -25,18 +25,19 @@ class SearchAnalytics(BaseModel):
     # 시간대별 통계
     hourly_searches: Dict[str, int] = Field(default_factory=dict, description="시간대별 검색 수")
     
-    class Config:
-        json_encoders = {
+    model_config = ConfigDict(
+        populate_by_name=True,
+        arbitrary_types_allowed=True,
+        json_encoders={
             datetime: lambda v: v.isoformat(),
             ObjectId: str
         }
-        validate_by_name = True
-        allow_population_by_field_name = True
+    )
 
 
 class CourseAnalytics(BaseModel):
     """강의 분석 모델"""
-    _id: Optional[ObjectId] = Field(None, alias="_id")
+    id: Optional[Union[str, ObjectId]] = Field(None, alias="_id")
     course_id: str = Field(..., description="강의 ID")
     date: datetime = Field(..., description="분석 날짜")
     
@@ -56,18 +57,19 @@ class CourseAnalytics(BaseModel):
     new_reviews: int = Field(default=0, description="신규 리뷰 수")
     avg_rating: float = Field(default=0.0, description="평균 평점")
     
-    class Config:
-        json_encoders = {
+    model_config = ConfigDict(
+        populate_by_name=True,
+        arbitrary_types_allowed=True,
+        json_encoders={
             datetime: lambda v: v.isoformat(),
             ObjectId: str
         }
-        validate_by_name = True
-        allow_population_by_field_name = True
+    )
 
 
 class ChatAnalytics(BaseModel):
     """챗봇 분석 모델"""
-    _id: Optional[ObjectId] = Field(None, alias="_id")
+    id: Optional[Union[str, ObjectId]] = Field(None, alias="_id")
     date: datetime = Field(..., description="분석 날짜")
     
     # 대화 통계
@@ -92,18 +94,19 @@ class ChatAnalytics(BaseModel):
     total_tokens_used: int = Field(default=0, description="총 사용 토큰 수")
     avg_tokens_per_message: float = Field(default=0.0, description="메시지당 평균 토큰 수")
     
-    class Config:
-        json_encoders = {
+    model_config = ConfigDict(
+        populate_by_name=True,
+        arbitrary_types_allowed=True,
+        json_encoders={
             datetime: lambda v: v.isoformat(),
             ObjectId: str
         }
-        validate_by_name = True
-        allow_population_by_field_name = True
+    )
 
 
 class SystemMetrics(BaseModel):
     """시스템 메트릭 모델"""
-    _id: Optional[ObjectId] = Field(None, alias="_id")
+    id: Optional[Union[str, ObjectId]] = Field(None, alias="_id")
     timestamp: datetime = Field(default_factory=datetime.now, description="측정 시간")
     
     # 크롤링 통계
@@ -125,10 +128,11 @@ class SystemMetrics(BaseModel):
     memory_usage_mb: float = Field(default=0.0, description="메모리 사용량 (MB)")
     cpu_usage_percent: float = Field(default=0.0, description="CPU 사용률 (%)")
     
-    class Config:
-        json_encoders = {
+    model_config = ConfigDict(
+        populate_by_name=True,
+        arbitrary_types_allowed=True,
+        json_encoders={
             datetime: lambda v: v.isoformat(),
             ObjectId: str
         }
-        validate_by_name = True
-        allow_population_by_field_name = True
+    )
