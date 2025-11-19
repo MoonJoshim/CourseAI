@@ -12,6 +12,7 @@ import sys
 from dotenv import load_dotenv
 from datetime import datetime
 from typing import List, Dict, Optional
+import google.generativeai as genai
 # 프로젝트 루트 경로 추가
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 
@@ -50,7 +51,7 @@ if LLM_PROVIDER == 'openai':
     openai_client = openai.OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 elif LLM_PROVIDER == 'gemini':
     from google import genai
-    GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
+    GEMINI_API_KEY = os.getenv('GEMINI_API_KEY') or os.getenv('GOOGLE_API_KEY') or os.getenv('GOOGLE_GEMINI_API_KEY')
     if not GEMINI_API_KEY:
         raise ValueError("GEMINI_API_KEY 환경변수가 설정되지 않았습니다.")
     gemini_client = genai.Client(api_key=GEMINI_API_KEY)
@@ -498,21 +499,42 @@ def chat():
         print(f"💬 사용자 메시지: {user_message}")
         print(f"🤖 LLM Provider: {LLM_PROVIDER}")
         
-        # LLM Provider에 따라 다른 함수 호출
-        if LLM_PROVIDER == 'openai':
-            ai_response, function_called = chat_with_openai(user_message, conversation_history)
-        elif LLM_PROVIDER == 'gemini':
-            ai_response, function_called = chat_with_gemini(user_message, conversation_history)
-        else:
-            return jsonify({'error': f'지원하지 않는 LLM Provider: {LLM_PROVIDER}'}), 400
+        # 대화 히스토리 구성
+        messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+        
+        # 이전 대화 히스토리 추가 (최근 5개만)
+        for hist in conversation_history[-5:]:
+            messages.append({"role": "user", "content": hist.get("user", "")})
+            messages.append({"role": "assistant", "content": hist.get("assistant", "")})
+        
+        # 현재 사용자 메시지 추가
+        messages.append({"role": "user", "content": user_message})
+        
+        # Gemini API 호출 (단순 대화)
+        model = genai.GenerativeModel("gemini-1.5-flash")
+        # 히스토리를 하나의 프롬프트로 연결
+        history_text = "\n".join([
+            f"사용자: {h.get('user','')}\n어시스턴트: {h.get('assistant','')}" for h in conversation_history[-5:]
+        ])
+        prompt = f"""
+{SYSTEM_PROMPT}
+
+이전 대화(있으면):
+{history_text}
+
+새 사용자 메시지:
+{user_message}
+""".strip()
+
+        gen = model.generate_content(prompt)
+        ai_response = gen.text if hasattr(gen, 'text') else str(gen)
         
         print(f"🤖 AI 응답: {ai_response[:100]}...")
         
         return jsonify({
             'response': ai_response,
             'timestamp': datetime.now().isoformat(),
-            'function_called': function_called,
-            'llm_provider': LLM_PROVIDER
+            'model': 'gemini-1.5-flash'
         })
         
     except Exception as e:
@@ -716,7 +738,6 @@ if __name__ == '__main__':
     
     print("🤖 에브리타임 AI 챗봇 API 서버 시작")
     print("📍 http://localhost:5003")
-    print(f"🧠 {provider_name} Function Calling 활성화")
     print(f"🔧 LLM Provider: {LLM_PROVIDER.upper()}")
     print(f"📊 Pinecone VectorStore: {vector_status}")
     if vector_store:
