@@ -161,8 +161,8 @@ def korean_to_ascii(text: str) -> str:
         '기계학습': 'machine_learning',
         '손경아': 'son_kyung_ah',
         '소프트웨어학과': 'software_engineering',
-        '머신러닝': 'machine_learning',
-        '김교수': 'kim_professor'
+        '유종빈': 'yoo_jongbin',
+        '인공지능': 'artificial_intelligence'
     }
     
     result = text
@@ -466,29 +466,14 @@ def main():
     
     # 강의 정보 (필수: course_name, professor)
     course_info = {
-        "course_name": "기계학습",  # 강의명 (필수)
-        "professor": "손경아",      # 교수명 (필수)
+        "course_name": "강의명",  # 강의명 (필수)
+        "professor": "교수명",      # 교수명 (필수)
         # "department": "소프트웨어학과",  # 학과 (선택사항)
     }
     
     # cURL 명령어 (여기에 실제 cURL 명령어를 입력하세요)
     # 여러 줄로 작성 가능 (백슬래시로 줄바꿈)
-    curl_command = """curl 'https://api.everytime.kr/find/lecture/article/list' \\
-    -H 'accept: application/json, text/plain, */*' \\
-    -H 'accept-language: ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7' \\
-    -H 'content-type: application/x-www-form-urlencoded' \\
-    -b '_ga=GA1.1.533112522.1758570564; x-et-device=11023700; etsid=s%3AxSo8VUeHeEDYNCw099dLDOxYknqatbSz.FdRnoPuOexxuxVDgePqncjerSk5JOVJmEpM2aEAd1os; _ga_85ZNEFVRGL=GS2.1.s1763511428$o9$g1$t1763512264$j60$l0$h0' \\
-    -H 'origin: https://everytime.kr' \\
-    -H 'priority: u=1, i' \\
-    -H 'referer: https://everytime.kr/' \\
-    -H 'sec-ch-ua: "Chromium";v="142", "Google Chrome";v="142", "Not_A Brand";v="99"' \\
-    -H 'sec-ch-ua-mobile: ?0' \\
-    -H 'sec-ch-ua-platform: "macOS"' \\
-    -H 'sec-fetch-dest: empty' \\
-    -H 'sec-fetch-mode: cors' \\
-    -H 'sec-fetch-site: same-site' \\
-    -H 'user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36' \\
-    --data-raw 'lectureId=2265164&limit=20&offset=0&sort=id'"""
+    curl_command = """curl 명령어"""
     
     # ==========================================
     
