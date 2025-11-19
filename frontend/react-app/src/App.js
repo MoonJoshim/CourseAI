@@ -3,7 +3,6 @@ import NavBar from './components/NavBar';
 import SearchPage from './pages/SearchPage';
 import DetailPage from './pages/DetailPage';
 import ChatPage from './pages/ChatPage';
-import RecommendPage from './pages/RecommendPage';
 import GPAPage from './pages/GPAPage';
 import ProfilePage from './pages/ProfilePage';
 import CoursesPage from './pages/CoursesPage';
@@ -121,13 +120,6 @@ const AICoursePlatform = () => {
         return (
           <DetailPage 
             selectedCourse={selectedCourse}
-            mockCourses={mockCourses}
-          />
-        );
-      case 'recommend':
-        return (
-          <RecommendPage 
-            mockUserProfile={mockUserProfile}
             mockCourses={mockCourses}
           />
         );
