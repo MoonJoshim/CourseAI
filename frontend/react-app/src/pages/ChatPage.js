@@ -1,13 +1,7 @@
-import React, { useState, useMemo, useRef } from 'react';
-import { MessageSquare, Send, User, Brain, Zap, Info, PauseCircle } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { MessageSquare, Send, User, Brain, Info, PauseCircle } from 'lucide-react';
 
-const DEFAULT_CHAT_MODE = (process.env.REACT_APP_AI_CHAT_MODE || 'chat').toLowerCase();
-const CHAT_ENDPOINTS = {
-  chat: '/api/chat',
-  rag: '/api/rag/chat',
-};
-const DEFAULT_ENDPOINT =
-  CHAT_ENDPOINTS[DEFAULT_CHAT_MODE] || CHAT_ENDPOINTS.chat;
+const CHAT_ENDPOINT = '/api/rag/chat';
 const API_BASE =
   (process.env.REACT_APP_AI_API_BASE_URL || '').replace(/\/$/, '') ||
   `${window.location.protocol}//${window.location.hostname}:5003`;
@@ -32,9 +26,6 @@ const ChatPage = () => {
   ]);
   const [inputMessage, setInputMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
-  const [mode, setMode] = useState(
-    CHAT_ENDPOINTS[DEFAULT_CHAT_MODE] ? DEFAULT_CHAT_MODE : 'chat'
-  );
   const abortControllerRef = useRef(null);
 
   const handleSendMessage = async () => {
@@ -70,7 +61,7 @@ const ChatPage = () => {
 
     const endpoint = `${
       API_BASE || `${window.location.protocol}//${window.location.hostname}:5003`
-    }${CHAT_ENDPOINTS[mode] || DEFAULT_ENDPOINT}`;
+    }${CHAT_ENDPOINT}`;
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
@@ -79,10 +70,7 @@ const ChatPage = () => {
     try {
       setIsSending(true);
 
-      const payload =
-        mode === 'rag'
-          ? { message: currentInput, history, top_k: DEFAULT_TOP_K }
-          : { message: currentInput, history };
+      const payload = { message: currentInput, history, top_k: DEFAULT_TOP_K };
 
       const res = await fetch(endpoint, {
         method: 'POST',
@@ -139,19 +127,6 @@ const ChatPage = () => {
     '컴공 전필 중에 쉬운 거는?'
   ];
 
-  const modeOptions = useMemo(
-    () => [
-      { value: 'chat', label: '기본 모드' },
-      { value: 'rag', label: 'RAG 모드' },
-    ],
-    []
-  );
-
-  const handleModeChange = (value) => {
-    if (value === mode) return;
-    setMode(value);
-  };
-
   const handleAbort = () => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -179,27 +154,7 @@ const ChatPage = () => {
       <div className="flex items-center justify-between px-4 py-2 bg-slate-50 border-b border-slate-200">
         <div className="flex items-center gap-2 text-sm text-slate-600">
           <Info className="w-4 h-4" />
-          <span>
-            {mode === 'rag'
-              ? 'RAG 모드: 강의평 벡터 검색을 사용해 더 정확한 답변을 제공합니다.'
-              : '기본 모드: 최신 AI 모델로 자연스러운 대화를 제공합니다.'}
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          {modeOptions.map((option) => (
-            <button
-              key={option.value}
-              onClick={() => handleModeChange(option.value)}
-              className={`px-3 py-1 rounded-full text-sm border transition ${
-                mode === option.value
-                  ? 'bg-sky-600 text-white border-sky-600'
-                  : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-100'
-              }`}
-            >
-              {option.value === 'rag' && <Zap className="inline w-3 h-3 mr-1" />}
-              {option.label}
-            </button>
-          ))}
+          <span>RAG 모드: 강의평 벡터 검색을 사용해 더 정확한 답변을 제공합니다.</span>
         </div>
       </div>
 
