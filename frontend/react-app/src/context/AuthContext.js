@@ -1,19 +1,10 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
-const TOKEN_STORAGE_KEY = 'courseai.auth.token';
 const USER_STORAGE_KEY = 'courseai.auth.user';
-
-const defaultBackendUrl = () => {
-  if (typeof window === 'undefined') {
-    return 'http://34.58.143.2:5002';
-  }
-  return 'http://34.58.143.2:5002';
-};
+const USERS_STORAGE_KEY = 'courseai.auth.users';
 
 const AuthContext = createContext({
   user: null,
-  token: null,
-  backendUrl: '',
   loading: false,
   isAuthenticating: false,
   authError: null,
@@ -23,6 +14,24 @@ const AuthContext = createContext({
   updateProfile: async () => {},
   setAuthError: () => {},
 });
+
+const loadStoredUsers = () => {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = window.localStorage.getItem(USERS_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    console.warn('Failed to parse stored users', error);
+    return [];
+  }
+};
+
+const saveStoredUsers = (users) => {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
+};
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
@@ -36,31 +45,16 @@ export const AuthProvider = ({ children }) => {
     }
   });
 
-  const [token, setToken] = useState(() => {
-    if (typeof window === 'undefined') return null;
-    return window.localStorage.getItem(TOKEN_STORAGE_KEY);
-  });
-
-  const [loading, setLoading] = useState(Boolean(token));
+  const [loading, setLoading] = useState(false);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [authError, setAuthError] = useState(null);
 
-  const backendUrl = useMemo(() => {
-    const fromEnv = process.env.REACT_APP_BACKEND_URL;
-    if (fromEnv && fromEnv.trim()) {
-      return fromEnv.replace(/\/$/, '');
-    }
-    return defaultBackendUrl();
+  useEffect(() => {
+    setLoading(false);
   }, []);
 
-  const persistAuthState = useCallback((nextToken, nextUser) => {
+  const persistUser = useCallback((nextUser) => {
     if (typeof window === 'undefined') return;
-    if (nextToken) {
-      window.localStorage.setItem(TOKEN_STORAGE_KEY, nextToken);
-    } else {
-      window.localStorage.removeItem(TOKEN_STORAGE_KEY);
-    }
-
     if (nextUser) {
       window.localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(nextUser));
     } else {
@@ -68,182 +62,130 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
-  const resetAuthState = useCallback(() => {
-    setUser(null);
-    setToken(null);
-    persistAuthState(null, null);
-  }, [persistAuthState]);
-
   const signOut = useCallback(() => {
-    resetAuthState();
+    setUser(null);
+    persistUser(null);
     setAuthError(null);
-  }, [resetAuthState]);
+  }, [persistUser]);
 
-  const fetchCurrentUser = useCallback(async (activeToken) => {
-    if (!activeToken) {
-      resetAuthState();
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const response = await fetch(`${backendUrl}/api/auth/me`, {
-        headers: {
-          Authorization: `Bearer ${activeToken}`,
-        },
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || '사용자 정보를 불러오지 못했습니다.');
+  const signUp = useCallback(
+    async (email, password, major) => {
+      if (!email || !password) {
+        setAuthError('이메일과 비밀번호를 입력해주세요.');
+        return;
       }
 
-      setUser(data.user);
-      persistAuthState(activeToken, data.user);
-    } catch (error) {
-      console.error('Failed to fetch current user', error);
-      resetAuthState();
-      setAuthError(error.message);
-    } finally {
-      setLoading(false);
-    }
-  }, [backendUrl, persistAuthState, resetAuthState]);
+      setIsAuthenticating(true);
+      setAuthError(null);
 
-  useEffect(() => {
-    if (token && !user) {
-      setLoading(true);
-      fetchCurrentUser(token);
-    } else {
-      setLoading(false);
-    }
-  }, [token, user, fetchCurrentUser]);
+      try {
+        const normalizedEmail = String(email).trim().toLowerCase();
+        const createdAt = new Date().toISOString();
 
-  const signIn = useCallback(async (email, password) => {
-    if (!email || !password) {
-      setAuthError('이메일과 비밀번호를 입력해주세요.');
-      return;
-    }
+        const allUsers = loadStoredUsers();
+        if (allUsers.some((u) => u.email === normalizedEmail)) {
+          throw new Error('이미 가입된 이메일입니다.');
+        }
 
-    setIsAuthenticating(true);
-    setAuthError(null);
+        const newUser = {
+          id: `local-${Date.now()}`,
+          email: normalizedEmail,
+          password,
+          createdAt,
+          profile: {
+            major: major || null,
+          },
+        };
 
-    try {
-      const response = await fetch(`${backendUrl}/api/auth/signin`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      });
+        const nextUsers = [...allUsers, newUser];
+        saveStoredUsers(nextUsers);
 
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || '로그인에 실패했습니다.');
+        setUser(newUser);
+        persistUser(newUser);
+      } catch (error) {
+        console.error('Sign-up error', error);
+        setAuthError(error.message);
+        throw error;
+      } finally {
+        setIsAuthenticating(false);
+      }
+    },
+    [persistUser]
+  );
+
+  const signIn = useCallback(
+    async (email, password) => {
+      if (!email || !password) {
+        setAuthError('이메일과 비밀번호를 입력해주세요.');
+        return;
       }
 
-      setUser(data.user);
-      setToken(data.token);
-      persistAuthState(data.token, data.user);
-    } catch (error) {
-      console.error('Sign-in error', error);
-      setAuthError(error.message);
-      resetAuthState();
-      throw error;
-    } finally {
-      setIsAuthenticating(false);
-    }
-  }, [backendUrl, persistAuthState, resetAuthState]);
+      setIsAuthenticating(true);
+      setAuthError(null);
 
-  const signUp = useCallback(async (email, password, name) => {
-    if (!email || !password) {
-      setAuthError('이메일과 비밀번호를 입력해주세요.');
-      return;
-    }
+      try {
+        const normalizedEmail = String(email).trim().toLowerCase();
+        const allUsers = loadStoredUsers();
+        const found = allUsers.find((u) => u.email === normalizedEmail);
 
-    setIsAuthenticating(true);
-    setAuthError(null);
+        if (!found || found.password !== password) {
+          throw new Error('이메일 또는 비밀번호가 올바르지 않습니다.');
+        }
 
-    try {
-      const response = await fetch(`${backendUrl}/api/auth/signup`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password, name }),
-      });
+        setUser(found);
+        persistUser(found);
+      } catch (error) {
+        console.error('Sign-in error', error);
+        setAuthError(error.message);
+        throw error;
+      } finally {
+        setIsAuthenticating(false);
+      }
+    },
+    [persistUser]
+  );
 
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || '회원가입에 실패했습니다.');
+  const updateProfile = useCallback(
+    async (profilePayload) => {
+      if (!user) {
+        throw new Error('로그인이 필요합니다.');
       }
 
-      setUser(data.user);
-      setToken(data.token);
-      persistAuthState(data.token, data.user);
-    } catch (error) {
-      console.error('Sign-up error', error);
-      setAuthError(error.message);
-      resetAuthState();
-      throw error;
-    } finally {
-      setIsAuthenticating(false);
-    }
-  }, [backendUrl, persistAuthState, resetAuthState]);
-
-  const updateProfile = useCallback(async (profilePayload) => {
-    if (!token) {
-      throw new Error('로그인이 필요합니다.');
-    }
-
-    try {
-      const response = await fetch(`${backendUrl}/api/users/me`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+      const nextUser = {
+        ...user,
+        profile: {
+          ...(user.profile || {}),
+          ...profilePayload,
         },
-        body: JSON.stringify(profilePayload),
-      });
+      };
 
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || '사용자 정보를 업데이트하지 못했습니다.');
-      }
+      setUser(nextUser);
+      persistUser(nextUser);
 
-      setUser(data.user);
-      persistAuthState(token, data.user);
-      return data.user;
-    } catch (error) {
-      console.error('Failed to update profile', error);
-      setAuthError(error.message);
-      throw error;
-    }
-  }, [backendUrl, token, persistAuthState]);
+      const allUsers = loadStoredUsers().map((u) =>
+        u.id === nextUser.id ? nextUser : u
+      );
+      saveStoredUsers(allUsers);
 
-  const value = useMemo(() => ({
-    user,
-    token,
-    backendUrl,
-    loading,
-    isAuthenticating,
-    authError,
-    setAuthError,
-    signIn,
-    signUp,
-    signOut,
-    updateProfile,
-  }), [
-    user,
-    token,
-    backendUrl,
-    loading,
-    isAuthenticating,
-    authError,
-    signIn,
-    signUp,
-    signOut,
-    updateProfile,
-  ]);
+      return nextUser;
+    },
+    [user, persistUser]
+  );
+
+  const value = useMemo(
+    () => ({
+      user,
+      loading,
+      isAuthenticating,
+      authError,
+      setAuthError,
+      signIn,
+      signUp,
+      signOut,
+      updateProfile,
+    }),
+    [user, loading, isAuthenticating, authError, signIn, signUp, signOut, updateProfile]
+  );
 
   return (
     <AuthContext.Provider value={value}>
