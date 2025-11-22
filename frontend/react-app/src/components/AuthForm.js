@@ -4,9 +4,8 @@ import { Mail, Lock, User } from 'lucide-react';
 
 const MAJORS = [
   '소프트웨어학과',
-  '컴퓨터공학과',
-  'AI융합학과',
-  '산업공학과',
+  '미디어학과',
+  '사이버보안학과',
 ];
 
 const AuthForm = () => {
