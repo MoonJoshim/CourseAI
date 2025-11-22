@@ -631,7 +631,7 @@ def health_db():
 
 @app.route('/api/rag/chat', methods=['POST'])
 def rag_chat():
-    """RAG 기반 AI 챗봇 대화 API"""
+    """RAG 기반 AI 챗봇 대화 API (VectorStore 없으면 일반 챗봇으로 폴백)"""
     try:
         data = request.json
         user_message = data.get('message', '').strip()
@@ -639,22 +639,35 @@ def rag_chat():
         top_k = data.get('top_k', 5)  # 검색할 강의평 개수 (기본값: 5)
         # Namespace: 지정하지 않으면 None (Pinecone이 자동으로 _default_ 사용)
         namespace = data.get('namespace') or os.getenv('PINE_NS') or None
-        
+
         if not user_message:
             return jsonify({'error': '메시지를 입력해주세요'}), 400
-        
+
+        # VectorStore가 없으면 RAG 대신 일반 챗봇으로 폴백
         if not vector_store:
+            print("⚠️ VectorStore 미초기화: 일반 LLM 챗봇으로 폴백합니다.")
+            if LLM_PROVIDER == 'openai':
+                ai_response, _ = chat_with_openai(user_message, conversation_history)
+            elif LLM_PROVIDER == 'gemini':
+                ai_response, _ = chat_with_gemini(user_message, conversation_history)
+            else:
+                return jsonify({'error': f'지원하지 않는 LLM Provider: {LLM_PROVIDER}'}), 400
+
             return jsonify({
-                'error': 'VectorStore가 초기화되지 않았습니다. Pinecone 설정을 확인해주세요.',
-                'response': '죄송합니다. 현재 벡터 데이터베이스에 연결할 수 없어 RAG 기능을 사용할 수 없습니다.'
-            }), 500
-        
+                'response': ai_response,
+                'timestamp': datetime.now().isoformat(),
+                'llm_provider': LLM_PROVIDER,
+                'rag_enabled': False,
+                'reviews_found': 0,
+                'top_reviews': []
+            })
+
         print(f"💬 [RAG] 사용자 메시지: {user_message}")
         print(f"🤖 LLM Provider: {LLM_PROVIDER}")
         print(f"🔍 검색할 강의평 개수: {top_k}")
         # namespace가 None이면 Pinecone이 자동으로 _default_를 사용
         print(f"📦 Namespace: {namespace if namespace else '_default_ (자동)'}")
-        
+
         # LLM Provider에 따라 다른 함수 호출
         if LLM_PROVIDER == 'openai':
             ai_response, similar_reviews = chat_with_rag_openai(user_message, conversation_history, top_k, namespace)
@@ -662,10 +675,10 @@ def rag_chat():
             ai_response, similar_reviews = chat_with_rag_gemini(user_message, conversation_history, top_k, namespace)
         else:
             return jsonify({'error': f'지원하지 않는 LLM Provider: {LLM_PROVIDER}'}), 400
-        
+
         print(f"🤖 [RAG] AI 응답: {ai_response[:100]}...")
         print(f"📊 검색된 강의평 개수: {len(similar_reviews)}")
-        
+
         # 검색된 강의평의 메타데이터 정리 (민감한 정보 제외)
         review_summaries = []
         for review in similar_reviews[:3]:  # 상위 3개만 반환
@@ -676,7 +689,7 @@ def rag_chat():
                 'rating': metadata.get('rating', 0),
                 'similarity_score': round(review.get('score', 0), 3)
             })
-        
+
         return jsonify({
             'response': ai_response,
             'timestamp': datetime.now().isoformat(),
@@ -685,7 +698,7 @@ def rag_chat():
             'reviews_found': len(similar_reviews),
             'top_reviews': review_summaries
         })
-        
+
     except Exception as e:
         print(f"❌ RAG 챗봇 오류: {str(e)}")
         import traceback
