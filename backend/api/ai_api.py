@@ -18,20 +18,32 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 
 from backend.api import get_mongo_db
 from backend.api.lecture_api import search_lecture, get_or_create_driver, ensure_logged_in
-# VectorStore를 직접 파일 경로로 import하여 __init__.py의 database 초기화를 피함
-import importlib.util
-vector_store_path = os.path.join(os.path.dirname(__file__), '..', 'models', 'vector_store.py')
-spec = importlib.util.spec_from_file_location("vector_store", vector_store_path)
-vector_store_module = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(vector_store_module)
-VectorStore = vector_store_module.VectorStore
 
-# VectorStore 초기화 (RAG용)
+# VectorStore를 직접 파일 경로로 import하여 __init__.py의 database 초기화를 피함
+VectorStore = None
+vector_store = None
 try:
-    vector_store = VectorStore()
-    print("✅ Pinecone VectorStore 초기화 완료 (RAG 기능 활성화)")
-except Exception as e:
-    print(f"⚠️ VectorStore 초기화 실패: {e}")
+    import importlib.util
+
+    vector_store_path = os.path.join(os.path.dirname(__file__), '..', 'models', 'vector_store.py')
+    spec = importlib.util.spec_from_file_location("vector_store", vector_store_path)
+    vector_store_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(vector_store_module)
+    VectorStore = getattr(vector_store_module, "VectorStore", None)
+
+    if VectorStore is not None:
+        try:
+            vector_store = VectorStore()
+            print("✅ Pinecone VectorStore 초기화 완료 (RAG 기능 활성화)")
+        except Exception as e:  # pylint: disable=broad-except
+            print(f"⚠️ VectorStore 초기화 실패: {e}")
+            vector_store = None
+    else:
+        print("⚠️ VectorStore 클래스를 vector_store 모듈에서 찾을 수 없습니다. RAG 기능 비활성화.")
+except Exception as e:  # pylint: disable=broad-except
+    # sentence_transformers, pinecone 등이 설치되지 않아도 기본 챗봇은 동작하도록 RAG만 비활성화
+    print(f"⚠️ VectorStore 모듈 로드 실패: {e}")
+    VectorStore = None
     vector_store = None
 
 # 환경변수 로드

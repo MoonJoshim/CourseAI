@@ -15,7 +15,6 @@ import {
   Sparkles,
   Target,
 } from 'lucide-react';
-import softwareCourses from '../data/softwareCourses.json';
 import AuthForm from '../components/AuthForm';
 import { useAuth } from '../context/AuthContext';
 
@@ -25,15 +24,15 @@ const GPA_REQUIREMENTS_KEY = 'courseai:gpa:requirements';
 
 const DEFAULT_GPA_PROFILE = {
   currentGpa: '0',
-  targetGpa: '4.0',
+  targetGpa: '0',
   totalCredits: '0',
-  requiredCredits: '130',
+  requiredCredits: '0',
 };
 
 const DEFAULT_GPA_REQUIREMENTS = [
-  { id: 'majorCore', label: '전공 필수', completed: '0', required: '30' },
-  { id: 'majorElective', label: '전공 선택', completed: '0', required: '42' },
-  { id: 'liberalArts', label: '교양', completed: '0', required: '36' },
+  { id: 'majorCore', label: '전공 필수', completed: '0', required: '0' },
+  { id: 'majorElective', label: '전공 선택', completed: '0', required: '0' },
+  { id: 'liberalArts', label: '교양', completed: '0', required: '0' },
 ];
 
 const GRADE_TO_POINT = {
@@ -151,97 +150,20 @@ const MyPage = () => {
     refreshAcademicData();
   }, [refreshAcademicData]);
 
-  const courseStats = useMemo(() => {
-    if (!Array.isArray(softwareCourses) || !softwareCourses.length) {
-      return {
-        totalCourses: 0,
-        totalProfessors: 0,
-        averageCredits: 0,
-        averageHours: 0,
-        courseTypeEntries: [],
-        targetGradeEntries: [],
-        semesterEntries: [],
-        lectureMethodEntries: [],
-        classTypeEntries: [],
-        topProfessors: [],
-        topTags: [],
-        highCreditCourses: [],
-      };
-    }
-
-    let totalCredits = 0;
-    let totalHours = 0;
-    const professorCounts = new Map();
-    const courseTypeCounts = new Map();
-    const targetGradeCounts = new Map();
-    const semesterCounts = new Map();
-    const lectureMethodCounts = new Map();
-    const classTypeCounts = new Map();
-    const tagCounts = new Map();
-
-    softwareCourses.forEach((course) => {
-      const credits = toNumber(course.credits, 0);
-      const hours = toNumber(course.hours, 0);
-      totalCredits += credits;
-      totalHours += hours;
-
-      const professor = course.professor || '미확인 교수';
-      professorCounts.set(professor, (professorCounts.get(professor) || 0) + 1);
-
-      const courseType = course.course_type || '분류 없음';
-      courseTypeCounts.set(courseType, (courseTypeCounts.get(courseType) || 0) + 1);
-
-      const targetGrade = course.target_grade || '학년 정보 없음';
-      targetGradeCounts.set(targetGrade, (targetGradeCounts.get(targetGrade) || 0) + 1);
-
-      const semester = course.semester || '학기 정보 없음';
-      semesterCounts.set(semester, (semesterCounts.get(semester) || 0) + 1);
-
-      const lectureMethod = course.lecture_method || course.details?.lecture_method || '미정';
-      lectureMethodCounts.set(
-        lectureMethod,
-        (lectureMethodCounts.get(lectureMethod) || 0) + 1
-      );
-
-      const classType = course.class_type || '형태 미정';
-      classTypeCounts.set(classType, (classTypeCounts.get(classType) || 0) + 1);
-
-      if (Array.isArray(course.tags)) {
-        course.tags.forEach((tag) => {
-          if (!tag) return;
-          tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
-        });
-      }
-    });
-
-    const sortedEntries = (map) =>
-      Array.from(map.entries()).sort((a, b) => b[1] - a[1]);
-
-    return {
-      totalCourses: softwareCourses.length,
-      totalProfessors: professorCounts.size,
-      averageCredits: softwareCourses.length ? totalCredits / softwareCourses.length : 0,
-      averageHours: softwareCourses.length ? totalHours / softwareCourses.length : 0,
-      courseTypeEntries: sortedEntries(courseTypeCounts),
-      targetGradeEntries: sortedEntries(targetGradeCounts),
-      semesterEntries: sortedEntries(semesterCounts),
-      lectureMethodEntries: sortedEntries(lectureMethodCounts),
-      classTypeEntries: sortedEntries(classTypeCounts),
-      topProfessors: sortedEntries(professorCounts).slice(0, 5),
-      topTags: sortedEntries(tagCounts).slice(0, 8),
-      highCreditCourses: softwareCourses
-        .filter((course) => toNumber(course.credits, 0) >= 4)
-        .sort((a, b) => toNumber(b.credits, 0) - toNumber(a.credits, 0))
-        .slice(0, 5)
-        .map((course) => ({
-          course_name: course.course_name,
-          credits: toNumber(course.credits, 0),
-          professor: course.professor,
-          course_type: course.course_type,
-          semester: course.semester,
-        })),
-    };
-  }, []);
+  const courseStats = useMemo(() => ({
+    totalCourses: 0,
+    totalProfessors: 0,
+    averageCredits: 0,
+    averageHours: 0,
+    courseTypeEntries: [],
+    targetGradeEntries: [],
+    semesterEntries: [],
+    lectureMethodEntries: [],
+    classTypeEntries: [],
+    topProfessors: [],
+    topTags: [],
+    highCreditCourses: [],
+  }), []);
 
   const plannedCredits = useMemo(
     () => gpaCourses.reduce((sum, course) => sum + toNumber(course.credits, 0), 0),
