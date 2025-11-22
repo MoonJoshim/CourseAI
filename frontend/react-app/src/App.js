@@ -124,11 +124,7 @@ const AICoursePlatform = () => {
           />
         );
       case 'gpa':
-        return (
-          <GPAPage 
-            mockUserProfile={mockUserProfile}
-          />
-        );
+        return <GPAPage />;
       case 'profile':
         return (
           <ProfilePage 
