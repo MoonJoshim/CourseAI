@@ -3,7 +3,13 @@ import { MessageSquare, Send, User, Brain, Info, PauseCircle } from 'lucide-reac
 
 const CHAT_ENDPOINT = '/api/rag/chat';
 // 기본값: 현재 도메인의 /api/rag/chat 으로 보냄 (Vercel rewrites가 백엔드로 프록시)
-const API_BASE = (process.env.REACT_APP_AI_API_BASE_URL || '').replace(/\/$/, '');
+const RAW_API_BASE = (process.env.REACT_APP_AI_API_BASE_URL || '').replace(/\/$/, '');
+const API_BASE =
+  typeof window !== 'undefined' &&
+  window.location.protocol === 'https:' &&
+  RAW_API_BASE.startsWith('http://')
+    ? ''
+    : RAW_API_BASE;
 const REQUEST_TIMEOUT = Number(process.env.REACT_APP_AI_API_TIMEOUT || 20000);
 const DEFAULT_TOP_K = Number(process.env.REACT_APP_AI_RAG_TOP_K || 5);
 
@@ -56,7 +62,7 @@ const ChatPage = () => {
         return acc;
       }, []);
 
-    const endpoint = `${API_BASE}${CHAT_ENDPOINT}` || CHAT_ENDPOINT;
+    const endpoint = API_BASE ? `${API_BASE}${CHAT_ENDPOINT}` : CHAT_ENDPOINT;
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
