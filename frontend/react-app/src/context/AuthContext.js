@@ -17,7 +17,8 @@ const AuthContext = createContext({
   loading: false,
   isAuthenticating: false,
   authError: null,
-  signInWithGoogle: async () => {},
+  signIn: async () => {},
+  signUp: async () => {},
   signOut: () => {},
   updateProfile: async () => {},
   setAuthError: () => {},
@@ -76,9 +77,6 @@ export const AuthProvider = ({ children }) => {
   const signOut = useCallback(() => {
     resetAuthState();
     setAuthError(null);
-    if (window.google?.accounts?.id) {
-      window.google.accounts.id.disableAutoSelect();
-    }
   }, [resetAuthState]);
 
   const fetchCurrentUser = useCallback(async (activeToken) => {
@@ -120,9 +118,9 @@ export const AuthProvider = ({ children }) => {
     }
   }, [token, user, fetchCurrentUser]);
 
-  const signInWithGoogle = useCallback(async (credential) => {
-    if (!credential) {
-      setAuthError('Google 인증 정보가 제공되지 않았습니다.');
+  const signIn = useCallback(async (email, password) => {
+    if (!email || !password) {
+      setAuthError('이메일과 비밀번호를 입력해주세요.');
       return;
     }
 
@@ -130,24 +128,60 @@ export const AuthProvider = ({ children }) => {
     setAuthError(null);
 
     try {
-      const response = await fetch(`${backendUrl}/api/auth/google`, {
+      const response = await fetch(`${backendUrl}/api/auth/signin`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ credential }),
+        body: JSON.stringify({ email, password }),
       });
 
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data.error || 'Google 로그인에 실패했습니다.');
+        throw new Error(data.error || '로그인에 실패했습니다.');
       }
 
       setUser(data.user);
       setToken(data.token);
       persistAuthState(data.token, data.user);
     } catch (error) {
-      console.error('Google sign-in error', error);
+      console.error('Sign-in error', error);
+      setAuthError(error.message);
+      resetAuthState();
+      throw error;
+    } finally {
+      setIsAuthenticating(false);
+    }
+  }, [backendUrl, persistAuthState, resetAuthState]);
+
+  const signUp = useCallback(async (email, password, name) => {
+    if (!email || !password) {
+      setAuthError('이메일과 비밀번호를 입력해주세요.');
+      return;
+    }
+
+    setIsAuthenticating(true);
+    setAuthError(null);
+
+    try {
+      const response = await fetch(`${backendUrl}/api/auth/signup`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password, name }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || '회원가입에 실패했습니다.');
+      }
+
+      setUser(data.user);
+      setToken(data.token);
+      persistAuthState(data.token, data.user);
+    } catch (error) {
+      console.error('Sign-up error', error);
       setAuthError(error.message);
       resetAuthState();
       throw error;
@@ -194,7 +228,8 @@ export const AuthProvider = ({ children }) => {
     isAuthenticating,
     authError,
     setAuthError,
-    signInWithGoogle,
+    signIn,
+    signUp,
     signOut,
     updateProfile,
   }), [
@@ -204,7 +239,8 @@ export const AuthProvider = ({ children }) => {
     loading,
     isAuthenticating,
     authError,
-    signInWithGoogle,
+    signIn,
+    signUp,
     signOut,
     updateProfile,
   ]);

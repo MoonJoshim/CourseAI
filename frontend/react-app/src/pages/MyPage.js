@@ -16,7 +16,7 @@ import {
   Target,
 } from 'lucide-react';
 import softwareCourses from '../data/softwareCourses.json';
-import GoogleSignInButton from '../components/GoogleSignInButton';
+import AuthForm from '../components/AuthForm';
 import { useAuth } from '../context/AuthContext';
 
 const GPA_PROFILE_KEY = 'courseai:gpa:profile';
@@ -403,21 +403,18 @@ const MyPage = () => {
   if (authLoading || isAuthenticating) {
     return (
       <div className="h-[calc(100vh-200px)] flex items-center justify-center text-slate-500 text-sm">
-        Google 로그인 상태를 확인하고 있습니다...
+        로그인 상태를 확인하고 있습니다...
       </div>
     );
   }
 
   if (!user) {
     return (
-      <div className="h-[calc(100vh-200px)] flex flex-col items-center justify-center gap-4 text-slate-600 text-sm">
-        <p className="text-center">
-          마이페이지 기능을 사용하려면 Google 계정으로 로그인해주세요.
+      <div className="h-[calc(100vh-200px)] flex flex-col items-center justify-center gap-4 text-slate-600 text-sm py-8">
+        <p className="text-center text-base font-medium text-slate-700">
+          마이페이지 기능을 사용하려면 로그인해주세요.
         </p>
-        <GoogleSignInButton />
-        {authError && (
-          <p className="text-xs text-rose-500 max-w-xs text-center">{authError}</p>
-        )}
+        <AuthForm />
       </div>
     );
   }

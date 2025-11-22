@@ -2,7 +2,6 @@ import React, { useMemo } from 'react';
 import { 
   Search, Calculator, Brain, Bell, User, MessageSquare, List, LogOut
 } from 'lucide-react';
-import GoogleSignInButton from './GoogleSignInButton';
 import { useAuth } from '../context/AuthContext';
 
 const NavBar = ({ currentPage, setCurrentPage }) => {
@@ -15,7 +14,7 @@ const NavBar = ({ currentPage, setCurrentPage }) => {
   }, [user]);
 
   const displaySecondary = useMemo(() => {
-    if (!user) return 'Google 계정으로 로그인하세요';
+    if (!user) return '로그인하세요';
     return user.major || user.email || '프로필 정보 없음';
   }, [user]);
 
@@ -110,7 +109,13 @@ const NavBar = ({ currentPage, setCurrentPage }) => {
               </button>
             </div>
           ) : (
-            <GoogleSignInButton />
+            <button
+              onClick={() => setCurrentPage('mypage')}
+              className="flex items-center gap-2 px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 transition-colors"
+            >
+              <User className="w-4 h-4" />
+              로그인
+            </button>
           )}
         </div>
       </div>
