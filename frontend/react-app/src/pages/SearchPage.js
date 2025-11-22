@@ -32,7 +32,7 @@ const SearchPage = ({
     setHasSearched(true);
 
     try {
-      const response = await fetch(`http://localhost:5002/api/search?keyword=${encodeURIComponent(searchQuery)}`);
+      const response = await fetch(`http://http://34.58.143.2:5002/api/search?keyword=${encodeURIComponent(searchQuery)}`);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);

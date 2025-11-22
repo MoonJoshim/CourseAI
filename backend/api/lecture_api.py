@@ -1591,7 +1591,7 @@ if __name__ == '__main__':
     signal.signal(signal.SIGTERM, signal_handler)
 
     print("🚀 에브리타임 강의평 크롤링 API 서버 시작")
-    print("📍 http://localhost:5002")
+    print("📍 http://34.58.143.2:5002")
 
     try:
         app.run(debug=True, host='0.0.0.0', port=5002)
