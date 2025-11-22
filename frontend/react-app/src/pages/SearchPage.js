@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { 
-  Search, Brain, BookOpen, MessageSquare, Users, Zap, 
-  Grid, List, Star, TrendingUp, Heart, Loader
+  Search, BookOpen, MessageSquare, Zap, 
+  Grid, List, Star, Heart, Loader
 } from 'lucide-react';
 
 const SearchPage = ({ 
