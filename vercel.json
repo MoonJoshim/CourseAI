@@ -1,0 +1,14 @@
+{
+    "version": 2,
+    "builds": [
+      {
+        "src": "frontend/react-app/package.json",
+        "use": "@vercel/static-build",
+        "config": { "distDir": "build" }
+      }
+    ],
+    "installCommand": "cd frontend/react-app && npm install",
+    "buildCommand": "cd frontend/react-app && npm run build",
+    "outputDirectory": "frontend/react-app/build",
+    "framework": "create-react-app"
+  }
