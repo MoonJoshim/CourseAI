@@ -7,8 +7,7 @@
         "config": { "distDir": "build" }
       }
     ],
-    "installCommand": "npm install --prefix frontend/react-app",
-    "buildCommand": "npm run build --prefix frontend/react-app",
-    "outputDirectory": "frontend/react-app/build",
+    "installCommand": "npm install --prefix frontend/react-app || npm install",
+    "buildCommand": "npm run build --prefix frontend/react-app || npm run build",
     "framework": "create-react-app"
   }
