@@ -6,7 +6,6 @@ import ChatPage from './pages/ChatPage';
 import GPAPage from './pages/GPAPage';
 import MyPage from './pages/MyPage';
 import CoursesPage from './pages/CoursesPage';
-import GoogleSignInButton from './components/GoogleSignInButton';
 import { useAuth } from './context/AuthContext';
 
 const AICoursePlatform = () => {
@@ -15,7 +14,6 @@ const AICoursePlatform = () => {
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [viewMode, setViewMode] = useState('grid');
   const [sortBy, setSortBy] = useState('rating');
-  const { user, loading: authLoading, isAuthenticating, authError } = useAuth();
 
   // Mock data
   const mockCourses = [
@@ -138,36 +136,6 @@ const AICoursePlatform = () => {
         );
     }
   };
-
-  if (authLoading || isAuthenticating) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 text-slate-600">
-        Google 계정 상태를 확인하고 있습니다...
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-sky-50 to-white flex flex-col items-center justify-center px-6">
-        <div className="max-w-md w-full bg-white border border-slate-200 rounded-2xl shadow-lg p-8 space-y-6">
-          <div className="text-center space-y-2">
-            <h1 className="text-2xl font-semibold text-slate-900">CourseAI</h1>
-            <p className="text-sm text-slate-600">
-              소프트웨어학과 강의 분석 서비스를 이용하려면 Google 계정으로 로그인해주세요.
-            </p>
-          </div>
-          <GoogleSignInButton />
-          {authError && (
-            <p className="text-xs text-rose-500 text-center">{authError}</p>
-          )}
-          <p className="text-xs text-slate-400 text-center">
-            로그인 후 맞춤 강의 추천, 학점 플래너, AI 상담 기능을 이용할 수 있습니다.
-          </p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gray-50">
