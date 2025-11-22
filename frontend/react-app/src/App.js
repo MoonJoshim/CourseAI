@@ -1,11 +1,42 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import NavBar from './components/NavBar';
 import SearchPage from './pages/SearchPage';
 import DetailPage from './pages/DetailPage';
 import ChatPage from './pages/ChatPage';
 import GPAPage from './pages/GPAPage';
-import ProfilePage from './pages/ProfilePage';
+import MyPage from './pages/MyPage';
 import CoursesPage from './pages/CoursesPage';
+
+const USER_PROFILE_STORAGE_KEY = 'courseai:userProfile';
+
+const DEFAULT_USER_PROFILE = {
+  name: '김학생',
+  major: '소프트웨어학과',
+  semester: 7,
+  email: 'student@example.com',
+  phone: '',
+  goal: 'AI 전문가',
+  bio: 'AI 기반 강의 추천 서비스를 만들고 싶어요.',
+  interests: ['프론트엔드', '웹개발', '데이터분석']
+};
+
+const loadUserProfile = () => {
+  if (typeof window === 'undefined') {
+    return DEFAULT_USER_PROFILE;
+  }
+
+  try {
+    const stored = window.localStorage.getItem(USER_PROFILE_STORAGE_KEY);
+    if (!stored) {
+      return DEFAULT_USER_PROFILE;
+    }
+    const parsed = JSON.parse(stored);
+    return { ...DEFAULT_USER_PROFILE, ...parsed };
+  } catch (error) {
+    console.warn('Failed to parse stored user profile', error);
+    return DEFAULT_USER_PROFILE;
+  }
+};
 
 const AICoursePlatform = () => {
   const [currentPage, setCurrentPage] = useState('search');
@@ -13,6 +44,16 @@ const AICoursePlatform = () => {
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [viewMode, setViewMode] = useState('grid');
   const [sortBy, setSortBy] = useState('rating');
+  const [userProfile, setUserProfile] = useState(loadUserProfile);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(USER_PROFILE_STORAGE_KEY, JSON.stringify(userProfile));
+  }, [userProfile]);
+
+  const handleProfileUpdate = (updatedProfile) => {
+    setUserProfile({ ...DEFAULT_USER_PROFILE, ...updatedProfile });
+  };
 
   // Mock data
   const mockCourses = [
@@ -87,16 +128,6 @@ const AICoursePlatform = () => {
     }
   ];
 
-  const mockUserProfile = {
-    name: '김학생',
-    major: '소프트웨어학과',
-    semester: 7,
-    gpa: 3.45,
-    totalCredits: 98,
-    requiredCredits: 130,
-    preferences: ['프론트엔드', '웹개발', '데이터분석']
-  };
-
   // Render current page
   const renderCurrentPage = () => {
     switch(currentPage) {
@@ -125,10 +156,11 @@ const AICoursePlatform = () => {
         );
       case 'gpa':
         return <GPAPage />;
-      case 'profile':
+      case 'mypage':
         return (
-          <ProfilePage 
-            mockUserProfile={mockUserProfile}
+          <MyPage 
+            userProfile={userProfile}
+            onUpdateProfile={handleProfileUpdate}
           />
         );
       case 'courses':
@@ -155,7 +187,7 @@ const AICoursePlatform = () => {
       <NavBar 
         currentPage={currentPage}
         setCurrentPage={setCurrentPage}
-        mockUserProfile={mockUserProfile}
+        userProfile={userProfile}
       />
       <div className="max-w-7xl mx-auto px-6 py-8">
         {renderCurrentPage()}
