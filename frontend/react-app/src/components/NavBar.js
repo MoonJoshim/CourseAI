@@ -1,12 +1,34 @@
 import React, { useMemo } from 'react';
 import { 
-  Search, Calculator, Brain, Bell, User, MessageSquare, List
+  Search, Calculator, Brain, Bell, User, MessageSquare, List, LogOut
 } from 'lucide-react';
+import GoogleSignInButton from './GoogleSignInButton';
+import { useAuth } from '../context/AuthContext';
 
-const NavBar = ({ currentPage, setCurrentPage, userProfile }) => {
-  const displayName = userProfile?.name || '미등록 사용자';
-  const displayMajor = userProfile?.major || '학과 정보 없음';
-  const userInitial = useMemo(() => displayName.trim().charAt(0).toUpperCase(), [displayName]);
+const NavBar = ({ currentPage, setCurrentPage }) => {
+  const { user, loading, isAuthenticating, signOut } = useAuth();
+
+  const displayName = useMemo(() => {
+    if (user?.name) return user.name;
+    if (user?.email) return user.email.split('@')[0];
+    return '로그인이 필요합니다';
+  }, [user]);
+
+  const displaySecondary = useMemo(() => {
+    if (!user) return 'Google 계정으로 로그인하세요';
+    return user.major || user.email || '프로필 정보 없음';
+  }, [user]);
+
+  const userInitial = useMemo(() => {
+    if (user?.name) return user.name.trim().charAt(0).toUpperCase();
+    if (user?.email) return user.email.trim().charAt(0).toUpperCase();
+    return '';
+  }, [user]);
+
+  const handleSignOut = () => {
+    signOut();
+    setCurrentPage('search');
+  };
 
   return (
     <div className="bg-white border-b border-slate-200 px-6 py-4">
@@ -56,20 +78,47 @@ const NavBar = ({ currentPage, setCurrentPage, userProfile }) => {
             <Bell className="w-5 h-5" />
             <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full"></span>
           </button>
-          <button 
-            onClick={() => setCurrentPage('mypage')}
-            className="flex items-center gap-3 hover:bg-slate-50 rounded-lg p-2 transition-colors"
-          >
-            <div className="w-8 h-8 bg-sky-500 rounded-full flex items-center justify-center text-white font-semibold">
-              {userInitial || <User className="w-5 h-5 text-white" />}
+          {user ? (
+            <div className="flex items-center gap-3">
+              <button 
+                onClick={() => setCurrentPage('mypage')}
+                className="flex items-center gap-3 hover:bg-slate-50 rounded-lg p-2 transition-colors"
+              >
+                {user.picture ? (
+                  <img
+                    src={user.picture}
+                    alt={user.name || 'Google Account'}
+                    className="w-8 h-8 rounded-full object-cover border border-slate-200"
+                    referrerPolicy="no-referrer"
+                  />
+                ) : (
+                  <div className="w-8 h-8 bg-sky-500 rounded-full flex items-center justify-center text-white font-semibold">
+                    {userInitial || <User className="w-5 h-5 text-white" />}
+                  </div>
+                )}
+                <div className="text-left">
+                  <p className="text-sm font-semibold text-slate-800">{displayName}</p>
+                  <p className="text-xs text-slate-500">{displaySecondary}</p>
+                </div>
+              </button>
+              <button
+                onClick={handleSignOut}
+                className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-slate-600 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                로그아웃
+              </button>
             </div>
-            <div>
-              <p className="text-sm font-semibold text-slate-800">{displayName}</p>
-              <p className="text-xs text-slate-500">{displayMajor}</p>
-            </div>
-          </button>
+          ) : (
+            <GoogleSignInButton />
+          )}
         </div>
       </div>
+      {(loading || isAuthenticating) && (
+        <div className="max-w-7xl mx-auto mt-2 text-xs text-slate-500">
+          로그인 상태를 확인하고 있습니다...
+        </div>
+      )}
     </div>
   );
 };

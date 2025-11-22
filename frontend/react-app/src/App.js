@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import NavBar from './components/NavBar';
 import SearchPage from './pages/SearchPage';
 import DetailPage from './pages/DetailPage';
@@ -6,37 +6,8 @@ import ChatPage from './pages/ChatPage';
 import GPAPage from './pages/GPAPage';
 import MyPage from './pages/MyPage';
 import CoursesPage from './pages/CoursesPage';
-
-const USER_PROFILE_STORAGE_KEY = 'courseai:userProfile';
-
-const DEFAULT_USER_PROFILE = {
-  name: '김학생',
-  major: '소프트웨어학과',
-  semester: 7,
-  email: 'student@example.com',
-  phone: '',
-  goal: 'AI 전문가',
-  bio: 'AI 기반 강의 추천 서비스를 만들고 싶어요.',
-  interests: ['프론트엔드', '웹개발', '데이터분석']
-};
-
-const loadUserProfile = () => {
-  if (typeof window === 'undefined') {
-    return DEFAULT_USER_PROFILE;
-  }
-
-  try {
-    const stored = window.localStorage.getItem(USER_PROFILE_STORAGE_KEY);
-    if (!stored) {
-      return DEFAULT_USER_PROFILE;
-    }
-    const parsed = JSON.parse(stored);
-    return { ...DEFAULT_USER_PROFILE, ...parsed };
-  } catch (error) {
-    console.warn('Failed to parse stored user profile', error);
-    return DEFAULT_USER_PROFILE;
-  }
-};
+import GoogleSignInButton from './components/GoogleSignInButton';
+import { useAuth } from './context/AuthContext';
 
 const AICoursePlatform = () => {
   const [currentPage, setCurrentPage] = useState('search');
@@ -44,16 +15,7 @@ const AICoursePlatform = () => {
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [viewMode, setViewMode] = useState('grid');
   const [sortBy, setSortBy] = useState('rating');
-  const [userProfile, setUserProfile] = useState(loadUserProfile);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    window.localStorage.setItem(USER_PROFILE_STORAGE_KEY, JSON.stringify(userProfile));
-  }, [userProfile]);
-
-  const handleProfileUpdate = (updatedProfile) => {
-    setUserProfile({ ...DEFAULT_USER_PROFILE, ...updatedProfile });
-  };
+  const { user, loading: authLoading, isAuthenticating, authError } = useAuth();
 
   // Mock data
   const mockCourses = [
@@ -157,12 +119,7 @@ const AICoursePlatform = () => {
       case 'gpa':
         return <GPAPage />;
       case 'mypage':
-        return (
-          <MyPage 
-            userProfile={userProfile}
-            onUpdateProfile={handleProfileUpdate}
-          />
-        );
+        return <MyPage />;
       case 'courses':
         return <CoursesPage />;
       default:
@@ -182,12 +139,41 @@ const AICoursePlatform = () => {
     }
   };
 
+  if (authLoading || isAuthenticating) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 text-slate-600">
+        Google 계정 상태를 확인하고 있습니다...
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-sky-50 to-white flex flex-col items-center justify-center px-6">
+        <div className="max-w-md w-full bg-white border border-slate-200 rounded-2xl shadow-lg p-8 space-y-6">
+          <div className="text-center space-y-2">
+            <h1 className="text-2xl font-semibold text-slate-900">CourseAI</h1>
+            <p className="text-sm text-slate-600">
+              소프트웨어학과 강의 분석 서비스를 이용하려면 Google 계정으로 로그인해주세요.
+            </p>
+          </div>
+          <GoogleSignInButton />
+          {authError && (
+            <p className="text-xs text-rose-500 text-center">{authError}</p>
+          )}
+          <p className="text-xs text-slate-400 text-center">
+            로그인 후 맞춤 강의 추천, 학점 플래너, AI 상담 기능을 이용할 수 있습니다.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <NavBar 
         currentPage={currentPage}
         setCurrentPage={setCurrentPage}
-        userProfile={userProfile}
       />
       <div className="max-w-7xl mx-auto px-6 py-8">
         {renderCurrentPage()}

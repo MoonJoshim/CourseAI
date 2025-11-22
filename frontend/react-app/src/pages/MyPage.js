@@ -16,6 +16,8 @@ import {
   Target,
 } from 'lucide-react';
 import softwareCourses from '../data/softwareCourses.json';
+import GoogleSignInButton from '../components/GoogleSignInButton';
+import { useAuth } from '../context/AuthContext';
 
 const GPA_PROFILE_KEY = 'courseai:gpa:profile';
 const GPA_COURSES_KEY = 'courseai:gpa:courses';
@@ -86,12 +88,12 @@ const sanitizeRequirements = (requirements) => {
   }));
 };
 
-const MyPage = ({ userProfile, onUpdateProfile }) => {
+const MyPage = () => {
+  const { user, loading: authLoading, isAuthenticating, authError, updateProfile } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
-  const [editableProfile, setEditableProfile] = useState(userProfile);
-  const [interestInput, setInterestInput] = useState(
-    (userProfile?.interests || []).join(', ')
-  );
+  const [editableProfile, setEditableProfile] = useState(null);
+  const [interestInput, setInterestInput] = useState('');
+  const [profileError, setProfileError] = useState(null);
   const [gpaProfile, setGpaProfile] = useState(() => ({
     ...DEFAULT_GPA_PROFILE,
     ...loadFromStorage(GPA_PROFILE_KEY, {}),
@@ -115,9 +117,23 @@ const MyPage = ({ userProfile, onUpdateProfile }) => {
   }, []);
 
   useEffect(() => {
-    setEditableProfile(userProfile);
-    setInterestInput((userProfile?.interests || []).join(', '));
-  }, [userProfile]);
+    if (!user) {
+      setEditableProfile(null);
+      setInterestInput('');
+      return;
+    }
+    setEditableProfile({
+      name: user.name || '',
+      major: user.major || '',
+      semester: user.semester ?? '',
+      email: user.email || '',
+      phone: user.phone || '',
+      goal: user.goal || '',
+      bio: user.bio || '',
+    });
+    setInterestInput((user.interests || []).join(', '));
+    setProfileError(null);
+  }, [user]);
 
   const refreshAcademicData = useCallback(() => {
     setGpaProfile({
@@ -287,24 +303,57 @@ const MyPage = ({ userProfile, onUpdateProfile }) => {
     [lastRefreshed]
   );
 
-  const handleSaveProfile = () => {
+  const handleSaveProfile = async () => {
+    if (!editableProfile) return;
+
     const sanitizedInterests = interestInput
       .split(',')
       .map((item) => item.trim())
       .filter(Boolean);
 
-    onUpdateProfile({
-      ...editableProfile,
-      semester: toNumber(editableProfile.semester, 1),
-      interests: sanitizedInterests,
-    });
-    setIsEditing(false);
+    const semesterValue = editableProfile.semester;
+    let semesterNumber = null;
+    if (semesterValue !== '' && semesterValue !== null && semesterValue !== undefined) {
+      const numeric = Number(semesterValue);
+      if (Number.isFinite(numeric)) {
+        semesterNumber = numeric;
+      } else {
+        setProfileError('학기는 숫자로 입력해주세요.');
+        return;
+      }
+    }
+
+    try {
+      setProfileError(null);
+      await updateProfile({
+        name: editableProfile.name,
+        major: editableProfile.major,
+        goal: editableProfile.goal,
+        bio: editableProfile.bio,
+        phone: editableProfile.phone,
+        semester: semesterNumber,
+        interests: sanitizedInterests,
+      });
+      setIsEditing(false);
+    } catch (error) {
+      setProfileError(error.message);
+    }
   };
 
   const handleCancelEdit = () => {
-    setEditableProfile(userProfile);
-    setInterestInput((userProfile?.interests || []).join(', '));
+    if (!user) return;
+    setEditableProfile({
+      name: user.name || '',
+      major: user.major || '',
+      semester: user.semester ?? '',
+      email: user.email || '',
+      phone: user.phone || '',
+      goal: user.goal || '',
+      bio: user.bio || '',
+    });
+    setInterestInput((user.interests || []).join(', '));
     setIsEditing(false);
+    setProfileError(null);
   };
 
   const systemHighlights = useMemo(
@@ -350,6 +399,28 @@ const MyPage = ({ userProfile, onUpdateProfile }) => {
         </div>
       );
     });
+
+  if (authLoading || isAuthenticating) {
+    return (
+      <div className="h-[calc(100vh-200px)] flex items-center justify-center text-slate-500 text-sm">
+        Google 로그인 상태를 확인하고 있습니다...
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="h-[calc(100vh-200px)] flex flex-col items-center justify-center gap-4 text-slate-600 text-sm">
+        <p className="text-center">
+          마이페이지 기능을 사용하려면 Google 계정으로 로그인해주세요.
+        </p>
+        <GoogleSignInButton />
+        {authError && (
+          <p className="text-xs text-rose-500 max-w-xs text-center">{authError}</p>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="h-[calc(100vh-200px)] flex flex-col">
@@ -467,7 +538,10 @@ const MyPage = ({ userProfile, onUpdateProfile }) => {
               </div>
             ) : (
               <button
-                onClick={() => setIsEditing(true)}
+            onClick={() => {
+              setProfileError(null);
+              setIsEditing(true);
+            }}
                 className="inline-flex items-center gap-2 px-3 py-1.5 text-sm border border-slate-300 text-slate-600 rounded-lg hover:bg-slate-50 transition-colors"
               >
                 <Edit className="w-4 h-4" />
@@ -475,6 +549,10 @@ const MyPage = ({ userProfile, onUpdateProfile }) => {
               </button>
             )}
           </div>
+
+      {profileError && (
+        <p className="text-xs text-rose-500">{profileError}</p>
+      )}
 
           {isEditing ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -522,9 +600,8 @@ const MyPage = ({ userProfile, onUpdateProfile }) => {
                 <input
                   type="email"
                   value={editableProfile?.email || ''}
-                  onChange={(e) =>
-                    setEditableProfile((prev) => ({ ...prev, email: e.target.value }))
-                  }
+                  readOnly
+                  disabled
                   className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-sky-400"
                   placeholder="example@univ.ac.kr"
                 />
@@ -580,33 +657,33 @@ const MyPage = ({ userProfile, onUpdateProfile }) => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-slate-700">
               <div className="flex items-center gap-2">
                 <User className="w-4 h-4 text-sky-600" />
-                <span>{userProfile?.name}</span>
+                <span>{user?.name || '이름 없음'}</span>
               </div>
               <div className="flex items-center gap-2">
                 <BookOpen className="w-4 h-4 text-emerald-600" />
-                <span>{userProfile?.major} • {userProfile?.semester}학기</span>
+                <span>{user?.major || '전공 미입력'} • {user?.semester ? `${user.semester}학기` : '학기 정보 없음'}</span>
               </div>
               <div className="flex items-center gap-2">
                 <Mail className="w-4 h-4 text-indigo-600" />
-                <span>{userProfile?.email || '이메일 미등록'}</span>
+                <span>{user?.email || '이메일 미등록'}</span>
               </div>
               <div className="flex items-center gap-2">
                 <Phone className="w-4 h-4 text-rose-500" />
-                <span>{userProfile?.phone || '연락처 미등록'}</span>
+                <span>{user?.phone || '연락처 미등록'}</span>
               </div>
               <div className="md:col-span-2 space-y-1">
                 <p className="text-xs text-slate-500 uppercase">Goal</p>
-                <p>{userProfile?.goal || '학습 목표를 설정해보세요.'}</p>
+                <p>{user?.goal || '학습 목표를 설정해보세요.'}</p>
               </div>
               <div className="md:col-span-2 space-y-1">
                 <p className="text-xs text-slate-500 uppercase">Bio</p>
-                <p>{userProfile?.bio || '자기소개를 추가해보세요.'}</p>
+                <p>{user?.bio || '자기소개를 추가해보세요.'}</p>
               </div>
               <div className="md:col-span-2 space-y-1">
                 <p className="text-xs text-slate-500 uppercase">Interests</p>
                 <div className="flex flex-wrap gap-2">
-                  {(userProfile?.interests || []).length ? (
-                    userProfile.interests.map((interest) => (
+                  {(user?.interests || []).length ? (
+                    user.interests.map((interest) => (
                       <span
                         key={interest}
                         className="px-2 py-1 text-xs bg-sky-100 text-sky-700 rounded-full border border-sky-200"
