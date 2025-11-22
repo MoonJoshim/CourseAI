@@ -2,9 +2,8 @@ import React, { useState, useRef } from 'react';
 import { MessageSquare, Send, User, Brain, Info, PauseCircle } from 'lucide-react';
 
 const CHAT_ENDPOINT = '/api/rag/chat';
-const API_BASE =
-  (process.env.REACT_APP_AI_API_BASE_URL || '').replace(/\/$/, '') ||
-  `${window.location.protocol}//${window.location.hostname}:5003`;
+// 기본값: 현재 도메인의 /api/rag/chat 으로 보냄 (Vercel rewrites가 백엔드로 프록시)
+const API_BASE = (process.env.REACT_APP_AI_API_BASE_URL || '').replace(/\/$/, '');
 const REQUEST_TIMEOUT = Number(process.env.REACT_APP_AI_API_TIMEOUT || 20000);
 const DEFAULT_TOP_K = Number(process.env.REACT_APP_AI_RAG_TOP_K || 5);
 
@@ -20,9 +19,10 @@ const ChatPage = () => {
     {
       id: 1,
       type: 'assistant',
-      content: '안녕하세요! 강의 관련 질문이 있으시면 언제든 물어보세요. 예를 들어 "노팀플 강의 추천해줘" 같은 질문을 해보시면 됩니다.',
-      timestamp: new Date()
-    }
+      content:
+        '안녕하세요! 강의 관련 질문이 있으시면 언제든 물어보세요. 예를 들어 "노팀플 강의 추천해줘" 같은 질문을 해보시면 됩니다.',
+      timestamp: new Date(),
+    },
   ]);
   const [inputMessage, setInputMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -32,16 +32,14 @@ const ChatPage = () => {
     if (!inputMessage.trim()) return;
     if (isSending) return;
 
-    // 사용자 메시지 추가
     const userMessage = {
       id: messages.length + 1,
       type: 'user',
       content: inputMessage,
-      timestamp: new Date()
+      timestamp: new Date(),
     };
 
-    // 즉시 사용자 메시지를 반영
-    setMessages(prev => [...prev, userMessage]);
+    setMessages((prev) => [...prev, userMessage]);
     const currentInput = inputMessage;
     setInputMessage('');
 
@@ -52,16 +50,13 @@ const ChatPage = () => {
           const next = arr[idx + 1];
           acc.push({
             user: m.content,
-            assistant:
-              next && next.type === 'assistant' ? next.content : '',
+            assistant: next && next.type === 'assistant' ? next.content : '',
           });
         }
         return acc;
       }, []);
 
-    const endpoint = `${
-      API_BASE || `${window.location.protocol}//${window.location.hostname}:5003`
-    }${CHAT_ENDPOINT}`;
+    const endpoint = `${API_BASE}${CHAT_ENDPOINT}` || CHAT_ENDPOINT;
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
@@ -87,10 +82,7 @@ const ChatPage = () => {
       const data = await res.json();
 
       const text =
-        data.response ||
-        data.ai_response ||
-        data.error ||
-        '응답을 불러오지 못했습니다.';
+        data.response || data.ai_response || data.error || '응답을 불러오지 못했습니다.';
 
       const aiResponse = {
         id: Date.now(),
@@ -103,16 +95,16 @@ const ChatPage = () => {
           topReviews: data.top_reviews || [],
         },
       };
-      setMessages(prev => [...prev, aiResponse]);
+      setMessages((prev) => [...prev, aiResponse]);
     } catch (e) {
       const aiResponse = {
         id: Date.now(),
         type: 'assistant',
         content: '서버와 통신 중 오류가 발생했어요. 잠시 후 다시 시도해주세요.',
         timestamp: new Date(),
-        metadata: { error: e.message }
+        metadata: { error: e.message },
       };
-      setMessages(prev => [...prev, aiResponse]);
+      setMessages((prev) => [...prev, aiResponse]);
     } finally {
       clearTimeout(timeoutId);
       abortControllerRef.current = null;
@@ -124,7 +116,7 @@ const ChatPage = () => {
     '노팀플 강의 추천해줘',
     '성적 잘 주는 교수님은?',
     '웹개발 관련 강의 어때?',
-    '컴공 전필 중에 쉬운 거는?'
+    '컴공 전필 중에 쉬운 거는?',
   ];
 
   const handleAbort = () => {
@@ -161,23 +153,30 @@ const ChatPage = () => {
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-50">
         {messages.map((message) => (
-          <div key={message.id} className={`flex items-start gap-3 ${message.type === 'user' ? 'flex-row-reverse' : ''}`}>
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-              message.type === 'user' 
-                ? 'bg-sky-500' 
-                : 'bg-slate-600'
-            }`}>
+          <div
+            key={message.id}
+            className={`flex items-start gap-3 ${
+              message.type === 'user' ? 'flex-row-reverse' : ''
+            }`}
+          >
+            <div
+              className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                message.type === 'user' ? 'bg-sky-500' : 'bg-slate-600'
+              }`}
+            >
               {message.type === 'user' ? (
                 <User className="w-4 h-4 text-white" />
               ) : (
                 <Brain className="w-4 h-4 text-white" />
               )}
             </div>
-            <div className={`max-w-2xl p-4 rounded-lg ${
-              message.type === 'user'
-                ? 'bg-sky-600 text-white rounded-tr-sm'
-                : 'bg-white border border-slate-200 rounded-tl-sm'
-            }`}>
+            <div
+              className={`max-w-2xl p-4 rounded-lg ${
+                message.type === 'user'
+                  ? 'bg-sky-600 text-white rounded-tr-sm'
+                  : 'bg-white border border-slate-200 rounded-tl-sm'
+              }`}
+            >
               <p
                 className={`text-sm leading-relaxed ${
                   message.type === 'user' ? 'text-white' : 'text-slate-800'
@@ -187,15 +186,13 @@ const ChatPage = () => {
               </p>
               {message.metadata?.topReviews?.length ? (
                 <div className="mt-3 text-xs text-slate-500 space-y-1">
-                  <p className="font-medium text-slate-600">
-                    관련 강의평 근거
-                  </p>
+                  <p className="font-medium text-slate-600">관련 강의평 근거</p>
                   <ul className="list-disc pl-4 space-y-1">
                     {message.metadata.topReviews.map((review, idx) => (
                       <li key={`${message.id}-review-${idx}`}>
                         <span className="font-semibold">{review.course_name}</span>{' '}
-                        ({review.professor || '교수 정보 없음'}) – 평점{' '}
-                        {review.rating ?? 'N/A'} / 유사도 {review.similarity_score}
+                        ({review.professor || '교수 정보 없음'}) – 평점 {review.rating ?? 'N/A'} /
+                        유사도 {review.similarity_score}
                       </li>
                     ))}
                   </ul>
@@ -207,9 +204,7 @@ const ChatPage = () => {
                 </p>
               ) : null}
               {message.metadata?.error ? (
-                <p className="text-xs mt-2 text-rose-500">
-                  오류: {message.metadata.error}
-                </p>
+                <p className="text-xs mt-2 text-rose-500">오류: {message.metadata.error}</p>
               ) : null}
               <p
                 className={`text-xs mt-2 ${
@@ -278,3 +273,4 @@ const ChatPage = () => {
 };
 
 export default ChatPage;
+
