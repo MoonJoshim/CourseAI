@@ -102,7 +102,7 @@ const SearchPage = ({
             <select
               value={selectedDepartment}
               onChange={(e) => setSelectedDepartment(e.target.value)}
-              className="px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none bg-white text-sm min-w-[140px]"
+              className="pl-4 pr-10 py-2.5 border border-slate-300 rounded-lg focus:outline-none bg-white text-sm min-w-[180px] appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22M6%208l4%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1.5em] bg-[right_0.5rem_center] bg-no-repeat"
             >
               {departments.map(dept => (
                 <option key={dept} value={dept}>{dept}</option>
@@ -112,7 +112,7 @@ const SearchPage = ({
             <select
               value={minRating}
               onChange={(e) => setMinRating(Number(e.target.value))}
-              className="px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none bg-white text-sm min-w-[140px]"
+              className="pl-4 pr-10 py-2.5 border border-slate-300 rounded-lg focus:outline-none bg-white text-sm min-w-[150px] appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22M6%208l4%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1.5em] bg-[right_0.5rem_center] bg-no-repeat"
             >
               <option value={0}>모든 평점</option>
               <option value={4.5}>4.5점 이상</option>
@@ -123,14 +123,14 @@ const SearchPage = ({
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none bg-white text-sm min-w-[140px]"
+              className="pl-4 pr-10 py-2.5 border border-slate-300 rounded-lg focus:outline-none bg-white text-sm min-w-[140px] appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22M6%208l4%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1.5em] bg-[right_0.5rem_center] bg-no-repeat"
             >
               <option value="rating">평점순</option>
               <option value="popularity">리뷰순</option>
               <option value="alphabetical">가나다순</option>
             </select>
 
-            <div className="ml-auto flex gap-3 items-center pr-8">
+            <div className="ml-auto flex gap-3 items-center pr-2">
               {['노팀플', '과제많음', '성적잘줌', '쉬움'].map(tag => (
                 <button
                   key={tag}
