@@ -246,13 +246,13 @@ const ChatPage = () => {
             <button
               onClick={handleSendMessage}
               disabled={!inputMessage.trim() || isSending}
-              className="px-5 py-2.5 disabled:bg-slate-300 text-white rounded-lg font-medium transition-all flex items-center gap-2 text-sm"
-              style={{background: !inputMessage.trim() || isSending ? '#CBD5E1' : 'linear-gradient(to right, #8FCACA, #97C1A9)'}}
+              className="px-6 disabled:bg-slate-300 text-white rounded-lg font-medium transition-all flex items-center gap-2 text-sm self-stretch"
+              style={{backgroundColor: !inputMessage.trim() || isSending ? '#CBD5E1' : '#8FCACA'}}
               onMouseEnter={(e) => {
-                if (!e.target.disabled) e.target.style.opacity = '0.9';
+                if (!e.target.disabled) e.target.style.backgroundColor = '#7AB8B8';
               }}
               onMouseLeave={(e) => {
-                if (!e.target.disabled) e.target.style.opacity = '1';
+                if (!e.target.disabled) e.target.style.backgroundColor = '#8FCACA';
               }}
             >
               {isSending ? (
