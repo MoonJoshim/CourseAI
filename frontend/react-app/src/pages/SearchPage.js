@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { 
-  Search, BookOpen, MessageSquare, Star, Filter
+  Search, BookOpen, MessageSquare, Star
 } from 'lucide-react';
 
 const SearchPage = ({ 
@@ -64,57 +64,38 @@ const SearchPage = ({
     return ['전체', ...Array.from(depts).sort()];
   }, [mockCourses]);
 
-  // 통계
-  const stats = useMemo(() => ({
-    totalCourses: mockCourses.length,
-    totalReviews: mockCourses.reduce((sum, c) => sum + c.reviewCount, 0),
-    avgRating: (mockCourses.reduce((sum, c) => sum + c.rating, 0) / mockCourses.length).toFixed(1)
-  }), [mockCourses]);
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/20 to-slate-50">
+    <div className="min-h-screen" style={{background: 'linear-gradient(135deg, #D4F0F0 0%, #CCE2CB 100%)'}}>
       {/* Header */}
-      <div className="bg-white border-b border-slate-200">
+      <div className="bg-white border-b" style={{borderColor: '#B6CFB6'}}>
         <div className="max-w-6xl mx-auto px-6 py-5">
-          <div className="mb-4">
+          <div className="mb-5">
             <h1 className="text-2xl font-bold text-slate-900 mb-1">과목별 강의평 조회</h1>
             <p className="text-sm text-slate-600">실제 수강생들의 강의평을 바탕으로 한 평가를 확인하세요</p>
           </div>
 
-          {/* Stats */}
-          <div className="flex gap-3 mb-4">
-            <div className="flex-1 bg-gradient-to-br from-slate-50 to-blue-50/30 px-3 py-2.5 rounded-lg border border-slate-200">
-              <div className="text-xs text-slate-600">전체 강의</div>
-              <div className="text-lg font-bold text-slate-900">{stats.totalCourses}</div>
-            </div>
-            <div className="flex-1 bg-gradient-to-br from-slate-50 to-blue-50/30 px-3 py-2.5 rounded-lg border border-slate-200">
-              <div className="text-xs text-slate-600">총 강의평</div>
-              <div className="text-lg font-bold text-slate-900">{stats.totalReviews}</div>
-            </div>
-            <div className="flex-1 bg-gradient-to-br from-slate-50 to-blue-50/30 px-3 py-2.5 rounded-lg border border-slate-200">
-              <div className="text-xs text-slate-600">평균 평점</div>
-              <div className="text-lg font-bold text-slate-900">{stats.avgRating}</div>
-            </div>
-          </div>
-
           {/* Search Bar */}
-          <div className="relative mb-3">
+          <div className="relative mb-4">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
             <input
               type="text"
               placeholder="강의명, 교수명, 태그로 검색"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+              className="w-full pl-10 pr-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 text-sm"
+              style={{borderColor: '#B6CFB6'}}
+              onFocus={(e) => e.target.style.borderColor = '#8FCACA'}
+              onBlur={(e) => e.target.style.borderColor = '#B6CFB6'}
             />
           </div>
 
           {/* Filters */}
-          <div className="flex gap-2 items-center">
+          <div className="flex gap-4 items-center">
             <select
               value={selectedDepartment}
               onChange={(e) => setSelectedDepartment(e.target.value)}
-              className="px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm"
+              className="px-4 py-2.5 border rounded-lg focus:outline-none bg-white text-sm min-w-[140px]"
+              style={{borderColor: '#B6CFB6'}}
             >
               {departments.map(dept => (
                 <option key={dept} value={dept}>{dept}</option>
@@ -124,7 +105,8 @@ const SearchPage = ({
             <select
               value={minRating}
               onChange={(e) => setMinRating(Number(e.target.value))}
-              className="px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm"
+              className="px-4 py-2.5 border rounded-lg focus:outline-none bg-white text-sm min-w-[140px]"
+              style={{borderColor: '#B6CFB6'}}
             >
               <option value={0}>모든 평점</option>
               <option value={4.5}>4.5점 이상</option>
@@ -135,20 +117,29 @@ const SearchPage = ({
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm"
+              className="px-4 py-2.5 border rounded-lg focus:outline-none bg-white text-sm min-w-[140px]"
+              style={{borderColor: '#B6CFB6'}}
             >
               <option value="rating">평점순</option>
               <option value="popularity">리뷰순</option>
               <option value="alphabetical">가나다순</option>
             </select>
 
-            <div className="ml-auto flex gap-2">
-              <span className="text-xs text-slate-500 py-2">빠른 필터</span>
+            <div className="ml-auto flex gap-3 items-center pr-2">
               {['노팀플', '과제많음', '성적잘줌', '쉬움'].map(tag => (
                 <button
                   key={tag}
                   onClick={() => setSearchQuery(tag)}
-                  className="px-2.5 py-1 bg-white border border-slate-200 rounded-full text-xs text-slate-700 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-all"
+                  className="px-4 py-1.5 bg-white border rounded-full text-xs text-slate-700 hover:text-slate-900 transition-all font-medium"
+                  style={{borderColor: '#B6CFB6'}}
+                  onMouseEnter={(e) => {
+                    e.target.style.backgroundColor = '#D4F0F0';
+                    e.target.style.borderColor = '#8FCACA';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.backgroundColor = 'white';
+                    e.target.style.borderColor = '#B6CFB6';
+                  }}
                 >
                   {tag}
                 </button>
@@ -161,15 +152,15 @@ const SearchPage = ({
       {/* Content */}
       <div className="max-w-6xl mx-auto px-6 py-5">
         {/* Results Info */}
-        <div className="mb-4 flex items-center justify-between">
-          <p className="text-sm text-slate-600">
-            검색 결과 <span className="font-semibold text-slate-900">{filteredCourses.length}</span>개
+        <div className="mb-4">
+          <p className="text-sm text-slate-700">
+            검색 결과 <span className="font-bold" style={{color: '#97C1A9'}}>{filteredCourses.length}</span>개
           </p>
         </div>
 
         {/* Course Grid - 2 columns */}
         {filteredCourses.length === 0 ? (
-          <div className="bg-white rounded-lg p-12 text-center border border-slate-200">
+          <div className="bg-white rounded-lg p-12 text-center border" style={{borderColor: '#B6CFB6'}}>
             <BookOpen className="w-12 h-12 text-slate-300 mx-auto mb-3" />
             <h3 className="text-base font-semibold text-slate-700 mb-1">검색 결과가 없습니다</h3>
             <p className="text-sm text-slate-500">다른 검색어를 시도해보세요</p>
@@ -179,17 +170,20 @@ const SearchPage = ({
             {filteredCourses.map((course) => (
               <div 
                 key={course.id} 
-                className="bg-gradient-to-br from-white to-slate-50/50 rounded-lg border border-slate-200 hover:border-blue-400 hover:shadow-md transition-all duration-200"
+                className="bg-white rounded-lg border hover:shadow-lg transition-all duration-200"
+                style={{borderColor: '#B6CFB6'}}
+                onMouseEnter={(e) => e.currentTarget.style.borderColor = '#8FCACA'}
+                onMouseLeave={(e) => e.currentTarget.style.borderColor = '#B6CFB6'}
               >
                 {/* Header */}
-                <div className="p-4 border-b border-slate-100">
+                <div className="p-4 border-b" style={{borderColor: '#CCE2CB'}}>
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex-1">
                       <h3 className="text-base font-bold text-slate-900 mb-1">{course.name}</h3>
                       <p className="text-sm text-slate-600">{course.professor}</p>
                       <p className="text-xs text-slate-500 mt-1">{course.department} • {course.credits}학점</p>
                     </div>
-                    <div className="flex items-center gap-1 bg-amber-50 px-2.5 py-1.5 rounded-lg border border-amber-200">
+                    <div className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border" style={{backgroundColor: '#FFF9E6', borderColor: '#FFD700'}}>
                       <Star className="w-4 h-4 text-amber-500 fill-current" />
                       <span className="text-base font-bold text-slate-900">{course.rating}</span>
                     </div>
@@ -208,7 +202,8 @@ const SearchPage = ({
                       {course.tags.map((tag, index) => (
                         <span 
                           key={index}
-                          className="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded border border-blue-200"
+                          className="px-2 py-0.5 text-xs rounded border"
+                          style={{backgroundColor: '#D4F0F0', color: '#2C5F5F', borderColor: '#8FCACA'}}
                         >
                           {tag}
                         </span>
@@ -218,7 +213,7 @@ const SearchPage = ({
 
                   {/* Summary */}
                   {course.aiSummary && (
-                    <div className="bg-gradient-to-br from-slate-50 to-blue-50/40 rounded-lg p-3 mb-3 border border-slate-200">
+                    <div className="rounded-lg p-3 mb-3 border" style={{backgroundColor: '#D4F0F0', borderColor: '#8FCACA'}}>
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-xs font-semibold text-slate-700">수강생 평가</span>
                         {course.sentiment > 0 && (
@@ -231,21 +226,21 @@ const SearchPage = ({
 
                   {/* Stats */}
                   <div className="grid grid-cols-3 gap-2 mb-3">
-                    <div className="text-center p-2 bg-slate-50 rounded border border-slate-200">
-                      <div className="text-xs text-slate-500 mb-1">난이도</div>
-                      <div className="text-xs font-semibold text-slate-700">
+                    <div className="text-center p-2 rounded border" style={{backgroundColor: '#CCE2CB', borderColor: '#B6CFB6'}}>
+                      <div className="text-xs text-slate-600 mb-1">난이도</div>
+                      <div className="text-xs font-semibold text-slate-800">
                         {course.difficulty || 3}/5
                       </div>
                     </div>
-                    <div className="text-center p-2 bg-slate-50 rounded border border-slate-200">
-                      <div className="text-xs text-slate-500 mb-1">과제량</div>
-                      <div className="text-xs font-semibold text-slate-700">
+                    <div className="text-center p-2 rounded border" style={{backgroundColor: '#CCE2CB', borderColor: '#B6CFB6'}}>
+                      <div className="text-xs text-slate-600 mb-1">과제량</div>
+                      <div className="text-xs font-semibold text-slate-800">
                         {course.workload || 3}/5
                       </div>
                     </div>
-                    <div className="text-center p-2 bg-slate-50 rounded border border-slate-200">
-                      <div className="text-xs text-slate-500 mb-1">학점</div>
-                      <div className="text-xs font-semibold text-slate-700">
+                    <div className="text-center p-2 rounded border" style={{backgroundColor: '#CCE2CB', borderColor: '#B6CFB6'}}>
+                      <div className="text-xs text-slate-600 mb-1">학점</div>
+                      <div className="text-xs font-semibold text-slate-800">
                         {course.gradeGenerosity || 3}/5
                       </div>
                     </div>
@@ -257,7 +252,10 @@ const SearchPage = ({
                       setSelectedCourse(course);
                       setCurrentPage('detail');
                     }}
-                    className="w-full py-2 bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-lg hover:from-blue-700 hover:to-blue-600 transition-all font-medium text-sm shadow-sm"
+                    className="w-full py-2 text-white rounded-lg transition-all font-medium text-sm shadow-sm"
+                    style={{background: 'linear-gradient(to right, #8FCACA, #97C1A9)'}}
+                    onMouseEnter={(e) => e.target.style.background = 'linear-gradient(to right, #7AB8B8, #86B098)'}
+                    onMouseLeave={(e) => e.target.style.background = 'linear-gradient(to right, #8FCACA, #97C1A9)'}
                   >
                     상세보기
                   </button>
@@ -269,7 +267,7 @@ const SearchPage = ({
 
         {/* Empty State */}
         {filteredCourses.length === 0 && searchQuery && (
-          <div className="bg-white rounded-lg p-12 text-center border border-slate-200">
+          <div className="bg-white rounded-lg p-12 text-center border" style={{borderColor: '#B6CFB6'}}>
             <BookOpen className="w-12 h-12 text-slate-300 mx-auto mb-3" />
             <h3 className="text-base font-semibold text-slate-700 mb-1">검색 결과가 없습니다</h3>
             <p className="text-sm text-slate-500">다른 검색어를 시도해보세요</p>
