@@ -227,13 +227,13 @@ const ChatPage = () => {
       {/* Input */}
       <div className="max-w-6xl mx-auto px-6 pb-5">
         <div className="bg-white rounded-lg border border-slate-200 p-4">
-          <div className="flex items-end gap-3">
+          <div className="flex items-stretch gap-3">
             <div className="flex-1">
               <textarea
                 value={inputMessage}
                 onChange={(e) => setInputMessage(e.target.value)}
                 placeholder="강의에 대해 궁금한 점을 물어보세요"
-                className="w-full resize-none border border-slate-300 rounded-lg px-4 py-2.5 focus:outline-none text-sm"
+                className="w-full resize-none border border-slate-300 rounded-lg px-4 py-2.5 focus:outline-none text-sm h-full"
                 rows="2"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
@@ -246,7 +246,7 @@ const ChatPage = () => {
             <button
               onClick={handleSendMessage}
               disabled={!inputMessage.trim() || isSending}
-              className="px-6 disabled:bg-slate-300 text-white rounded-lg font-medium transition-all flex items-center gap-2 text-sm self-stretch"
+              className="px-6 disabled:bg-slate-300 text-white rounded-lg font-medium transition-all flex items-center justify-center gap-2 text-sm"
               style={{backgroundColor: !inputMessage.trim() || isSending ? '#CBD5E1' : '#8FCACA'}}
               onMouseEnter={(e) => {
                 if (!e.target.disabled) e.target.style.backgroundColor = '#7AB8B8';
