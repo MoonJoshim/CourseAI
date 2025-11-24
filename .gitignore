@@ -43,6 +43,7 @@ MANIFEST
 
 # 가상환경
 venv/
+.venv/
 env/
 ENV/
 env.bak/
