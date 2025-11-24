@@ -9,6 +9,8 @@ const AuthForm = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [major, setMajor] = useState(MAJORS[0]);
+  const [everytimeId, setEverytimeId] = useState('');
+  const [everytimePassword, setEverytimePassword] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -71,27 +73,67 @@ const AuthForm = () => {
         </div>
 
         {isSignUp && (
-          <div className="space-y-1">
-            <label className="text-sm text-slate-600 flex items-center gap-2">
-              <User className="w-4 h-4" />
-              전공 선택
-            </label>
-            <select
-              value={major}
-              onChange={(e) => setMajor(e.target.value)}
-              required
-              className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2"
-              style={{borderColor: '#B6CFB6'}}
-              onFocus={(e) => e.target.style.borderColor = '#8FCACA'}
-              onBlur={(e) => e.target.style.borderColor = '#B6CFB6'}
-            >
-              {MAJORS.map((m) => (
-                <option key={m} value={m}>
-                  {m}
-                </option>
-              ))}
-            </select>
-          </div>
+          <>
+            <div className="space-y-1">
+              <label className="text-sm text-slate-600 flex items-center gap-2">
+                <User className="w-4 h-4" />
+                전공 선택
+              </label>
+              <select
+                value={major}
+                onChange={(e) => setMajor(e.target.value)}
+                required
+                className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2"
+                style={{borderColor: '#B6CFB6'}}
+                onFocus={(e) => e.target.style.borderColor = '#8FCACA'}
+                onBlur={(e) => e.target.style.borderColor = '#B6CFB6'}
+              >
+                {MAJORS.map((m) => (
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="pt-3 border-t border-slate-200">
+              <p className="text-xs text-slate-500 mb-3">에브리타임 계정 (선택사항)</p>
+              
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <label className="text-sm text-slate-600">
+                    에브리타임 아이디
+                  </label>
+                  <input
+                    type="text"
+                    value={everytimeId}
+                    onChange={(e) => setEverytimeId(e.target.value)}
+                    className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2"
+                    style={{borderColor: '#B6CFB6'}}
+                    onFocus={(e) => e.target.style.borderColor = '#8FCACA'}
+                    onBlur={(e) => e.target.style.borderColor = '#B6CFB6'}
+                    placeholder="에브리타임 아이디 (선택)"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-sm text-slate-600">
+                    에브리타임 비밀번호
+                  </label>
+                  <input
+                    type="password"
+                    value={everytimePassword}
+                    onChange={(e) => setEverytimePassword(e.target.value)}
+                    className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2"
+                    style={{borderColor: '#B6CFB6'}}
+                    onFocus={(e) => e.target.style.borderColor = '#8FCACA'}
+                    onBlur={(e) => e.target.style.borderColor = '#B6CFB6'}
+                    placeholder="에브리타임 비밀번호 (선택)"
+                  />
+                </div>
+              </div>
+            </div>
+          </>
         )}
 
         {authError && (
