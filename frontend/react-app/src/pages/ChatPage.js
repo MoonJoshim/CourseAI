@@ -30,8 +30,10 @@ const ChatPage = () => {
     setInputMessage('');
 
     try {
-      const apiUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5002';
-      const url = `${apiUrl}/api/chat`;
+      // AI 챗봇 API는 별도 포트 사용 (5003)
+      const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5002';
+      const aiApiUrl = process.env.REACT_APP_AI_API_URL || backendUrl.replace(':5002', ':5003');
+      const url = `${aiApiUrl}/api/chat`;
       const history = messages
         .filter(m => m.type === 'user' || m.type === 'assistant')
         .reduce((acc, m, idx, arr) => {
