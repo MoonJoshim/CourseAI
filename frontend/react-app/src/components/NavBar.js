@@ -32,30 +32,42 @@ const NavBar = ({ currentPage, setCurrentPage }) => {
   return (
     <div className="bg-white border-b border-slate-200 px-6 py-4">
       <div className="flex items-center justify-between max-w-7xl mx-auto">
-        <nav className="flex gap-1">
-          {[
-            { id: 'search', label: '강의 검색', icon: Search },
-            { id: 'courses', label: '개설과목 현황', icon: List },
-            { id: 'chat', label: 'AI 채팅', icon: MessageSquare },
-            { id: 'gpa', label: '학점 계산', icon: Calculator }
-          ].map(tab => {
-            const Icon = tab.icon;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setCurrentPage(tab.id)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors text-sm font-medium ${
-                  currentPage === tab.id 
-                    ? 'bg-blue-50 text-blue-700 border border-blue-200' 
-                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-                }`}
-              >
-                <Icon className="w-4 h-4" />
-                {tab.label}
-              </button>
-            );
-          })}
-        </nav>
+        <div className="flex items-center gap-8">
+          <button 
+            onClick={() => setCurrentPage('search')}
+            className="hover:opacity-80 transition-opacity"
+          >
+            <div>
+              <h1 className="text-lg font-bold text-slate-900">CourseAI</h1>
+              <p className="text-xs text-slate-500">스마트 강의 분석</p>
+            </div>
+          </button>
+          
+          <nav className="flex gap-1">
+            {[
+              { id: 'search', label: '강의 검색', icon: Search },
+              { id: 'courses', label: '개설과목 현황', icon: List },
+              { id: 'chat', label: 'AI 채팅', icon: MessageSquare },
+              { id: 'gpa', label: '학점 계산', icon: Calculator }
+            ].map(tab => {
+              const Icon = tab.icon;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setCurrentPage(tab.id)}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors text-sm font-medium ${
+                    currentPage === tab.id 
+                      ? 'bg-blue-50 text-blue-700 border border-blue-200' 
+                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                  {tab.label}
+                </button>
+              );
+            })}
+          </nav>
+        </div>
 
         <div className="flex items-center gap-4">
           <button className="p-2 text-slate-500 hover:text-slate-700 relative">
