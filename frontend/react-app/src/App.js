@@ -8,6 +8,7 @@ import MyPage from './pages/MyPage';
 import CoursesPage from './pages/CoursesPage';
 import AuthForm from './components/AuthForm';
 import { useAuth } from './context/AuthContext';
+import pineconeCourses from './data/pinecone_courses.json';
 
 const AICoursePlatform = () => {
   const [currentPage, setCurrentPage] = useState('search');
@@ -17,8 +18,8 @@ const AICoursePlatform = () => {
   const [sortBy, setSortBy] = useState('rating');
   const { user, loading: authLoading, isAuthenticating, authError } = useAuth();
 
-  // Mock data
-  const mockCourses = [
+  // Pinecone 강의 데이터 사용
+  const mockCourses = pineconeCourses.length > 0 ? pineconeCourses : [
     {
       id: 1,
       courseCode: 'CS301',
