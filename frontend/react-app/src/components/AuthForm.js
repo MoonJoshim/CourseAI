@@ -103,16 +103,16 @@ const AuthForm = () => {
         <button
           type="submit"
           disabled={isAuthenticating}
-          className="w-full py-2.5 text-white rounded-lg font-medium transition-all text-sm shadow-sm disabled:opacity-50"
-          style={{background: 'linear-gradient(to right, #8FCACA, #97C1A9)'}}
+          className="w-full py-2.5 text-white rounded-lg font-medium transition-all text-sm disabled:opacity-50"
+          style={{backgroundColor: '#8FCACA'}}
           onMouseEnter={(e) => {
             if (!e.target.disabled) {
-              e.target.style.background = 'linear-gradient(to right, #7AB8B8, #86B098)';
+              e.target.style.backgroundColor = '#7AB8B8';
             }
           }}
           onMouseLeave={(e) => {
             if (!e.target.disabled) {
-              e.target.style.background = 'linear-gradient(to right, #8FCACA, #97C1A9)';
+              e.target.style.backgroundColor = '#8FCACA';
             }
           }}
         >

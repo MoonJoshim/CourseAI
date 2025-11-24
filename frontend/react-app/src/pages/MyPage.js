@@ -106,7 +106,9 @@ const MyPage = () => {
                 <button
                   onClick={handleSaveProfile}
                   className="flex items-center gap-2 px-4 py-2 text-white rounded-lg text-sm font-medium transition-all"
-                  style={{background: 'linear-gradient(to right, #8FCACA, #97C1A9)'}}
+                  style={{backgroundColor: '#8FCACA'}}
+                  onMouseEnter={(e) => e.target.style.backgroundColor = '#7AB8B8'}
+                  onMouseLeave={(e) => e.target.style.backgroundColor = '#8FCACA'}
                 >
                   <Save className="w-4 h-4" />
                   저장

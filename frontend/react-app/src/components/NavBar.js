@@ -57,10 +57,10 @@ const NavBar = ({ currentPage, setCurrentPage }) => {
                   onClick={() => setCurrentPage(tab.id)}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all text-sm font-medium ${
                     currentPage === tab.id 
-                      ? 'text-white shadow-sm' 
+                      ? 'text-white' 
                       : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                   }`}
-                  style={currentPage === tab.id ? {background: 'linear-gradient(to right, #8FCACA, #97C1A9)'} : {}}
+                  style={currentPage === tab.id ? {backgroundColor: '#8FCACA'} : {}}
                 >
                   <Icon className="w-4 h-4" />
                   {tab.label}
@@ -108,9 +108,9 @@ const NavBar = ({ currentPage, setCurrentPage }) => {
             <button
               onClick={() => setCurrentPage('mypage')}
               className="flex items-center gap-2 px-4 py-2 text-white rounded-lg transition-all text-sm font-medium"
-              style={{background: 'linear-gradient(to right, #8FCACA, #97C1A9)'}}
-              onMouseEnter={(e) => e.target.style.background = 'linear-gradient(to right, #7AB8B8, #86B098)'}
-              onMouseLeave={(e) => e.target.style.background = 'linear-gradient(to right, #8FCACA, #97C1A9)'}
+              style={{backgroundColor: '#8FCACA'}}
+              onMouseEnter={(e) => e.target.style.backgroundColor = '#7AB8B8'}
+              onMouseLeave={(e) => e.target.style.backgroundColor = '#8FCACA'}
             >
               <User className="w-4 h-4" />
               로그인

@@ -245,9 +245,9 @@ const SearchPage = ({
                       setCurrentPage('detail');
                     }}
                     className="w-full py-2 text-white rounded-lg transition-all font-medium text-sm"
-                    style={{background: 'linear-gradient(to right, #8FCACA, #97C1A9)'}}
-                    onMouseEnter={(e) => e.target.style.opacity = '0.9'}
-                    onMouseLeave={(e) => e.target.style.opacity = '1'}
+                    style={{backgroundColor: '#8FCACA'}}
+                    onMouseEnter={(e) => e.target.style.backgroundColor = '#7AB8B8'}
+                    onMouseLeave={(e) => e.target.style.backgroundColor = '#8FCACA'}
                   >
                     상세보기
                   </button>

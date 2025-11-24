@@ -215,7 +215,7 @@ const CoursesPage = () => {
                   ? 'text-white'
                   : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'
               }`}
-              style={activeTab === 'required' ? {background: 'linear-gradient(to right, #8FCACA, #97C1A9)'} : {}}
+              style={activeTab === 'required' ? {backgroundColor: '#8FCACA'} : {}}
             >
               전공필수
             </button>
@@ -226,7 +226,7 @@ const CoursesPage = () => {
                   ? 'text-white'
                   : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'
               }`}
-              style={activeTab === 'elective' ? {background: 'linear-gradient(to right, #8FCACA, #97C1A9)'} : {}}
+              style={activeTab === 'elective' ? {backgroundColor: '#8FCACA'} : {}}
             >
               전공선택
             </button>
@@ -237,7 +237,7 @@ const CoursesPage = () => {
                   ? 'text-white'
                   : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'
               }`}
-              style={activeTab === 'general' ? {background: 'linear-gradient(to right, #8FCACA, #97C1A9)'} : {}}
+              style={activeTab === 'general' ? {backgroundColor: '#8FCACA'} : {}}
             >
               교양선택
             </button>

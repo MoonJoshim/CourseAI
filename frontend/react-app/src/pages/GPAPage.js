@@ -370,7 +370,7 @@ const GPAPage = () => {
                     className="h-2 rounded-full transition-all"
                     style={{
                       width: `${Math.min((totalCreditsNum / requiredCreditsNum) * 100, 100)}%`,
-                      background: 'linear-gradient(to right, #8FCACA, #97C1A9)'
+                      backgroundColor: '#8FCACA'
                     }}
                   ></div>
                 </div>
