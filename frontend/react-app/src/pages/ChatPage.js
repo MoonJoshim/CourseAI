@@ -208,14 +208,20 @@ const ChatPage = () => {
 
         {/* Recommended Prompts */}
         {messages.length === 1 && (
-          <div className="mt-6 p-5 rounded-lg bg-slate-50 border border-slate-200">
+          <div
+            className="mt-6 p-5 rounded-lg border"
+            style={{ backgroundColor: '#E6F4F4', borderColor: '#B6E2E2' }}
+          >
             <p className="text-sm font-semibold mb-4 text-slate-700">추천 프롬프트</p>
             <div className="grid grid-cols-2 gap-3">
               {quickQuestions.map((question, index) => (
                 <button
                   key={index}
                   onClick={() => setInputMessage(question)}
-                  className="text-sm bg-white text-slate-700 px-4 py-2.5 rounded-lg border border-slate-200 transition-all text-left hover:shadow-md hover:border-slate-300"
+                  className="text-sm text-slate-700 px-4 py-2.5 rounded-lg border transition-all text-left"
+                  style={{ backgroundColor: '#F8FFFF', borderColor: '#B6E2E2' }}
+                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#E0F0F0')}
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#F8FFFF')}
                 >
                   {question}
                 </button>

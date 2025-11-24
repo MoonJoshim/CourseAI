@@ -242,7 +242,9 @@ const GPAPage = () => {
         {retakeRecommendations.length > 0 && (
           <div className="bg-white border-2 border-red-500 rounded-lg p-5 mb-4">
             <h3 className="text-base font-bold text-red-600 mb-3">⚠️ 재수강 추천</h3>
-            <p className="text-sm text-slate-700 mb-4">C+ 이하 성적의 과목이 발견되었습니다. 재수강을 고려해보세요.</p>
+            <p className="text-sm text-slate-700 mb-4">
+              C+ 이하 성적의 과목은 유사 과목을 수강하거나 동일 과목을 재수강해 평점을 회복하는 것이 좋습니다.
+            </p>
             <div className="space-y-2">
               {retakeRecommendations.map((rec, index) => (
                 <div key={index} className="bg-slate-50 rounded-lg p-4 border border-slate-200">
@@ -253,13 +255,12 @@ const GPAPage = () => {
                         현재 성적: <span className="font-semibold text-red-600">{rec.currentGrade}</span> ({rec.currentPoint}점) • {rec.credits}학점
                       </p>
                     </div>
-                    <div className="text-right">
-                      <p className="text-lg font-bold text-slate-900">+{rec.potentialGain}</p>
-                      <p className="text-xs text-slate-500">예상 향상</p>
-                    </div>
+                    <span className="text-xs font-semibold text-slate-600 bg-white px-3 py-1 rounded-full border border-slate-200">
+                      유사 과목 / 재수강 권장
+                    </span>
                   </div>
                   <p className="text-xs text-red-700 bg-red-50 px-3 py-2 rounded border border-red-200">
-                    {rec.recommendation}
+                    {rec.recommendation}. 유사 과목을 대체 수강하거나 동일 과목을 재수강해 GPA를 끌어올려 보세요.
                   </p>
                 </div>
               ))}
@@ -342,11 +343,6 @@ const GPAPage = () => {
             <h3 className="text-base font-bold text-slate-900 mb-4">학점 현황</h3>
 
             <div className="space-y-3">
-              <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
-                <div className="text-xs text-slate-600 mb-1">현재 평점</div>
-                <div className="text-2xl font-bold text-slate-900">{formatDecimal(currentGpaNum)}</div>
-              </div>
-
               <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
                 <div className="text-xs text-slate-600 mb-1">이번 학기 예상</div>
                 <div className="text-2xl font-bold text-slate-900">{plannedGpaDisplay}</div>

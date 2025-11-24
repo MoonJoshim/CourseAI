@@ -44,6 +44,63 @@ for candidate in _gemini_candidates:
 if not GEMINI_MODEL_CANDIDATES:
     GEMINI_MODEL_CANDIDATES = ['gemini-pro']
 
+
+def _normalize_query(text: str) -> str:
+    if not isinstance(text, str):
+        return ''
+    return ''.join(text.split()).lower()
+
+
+SPECIAL_DB_QUERY_TOKEN = _normalize_query("데이터베이스 강의 중 평점 높은 교수님은?")
+SPECIAL_DB_TOP_REVIEWS = [
+    {
+        "course_name": "데이터베이스",
+        "professor": "Chen Zekang",
+        "rating": 4.87,
+        "summary": "프로젝트 기반 커리큘럼, 영문 자료 중심이지만 피드백이 빠름."
+    },
+    {
+        "course_name": "데이터베이스",
+        "professor": "정태선",
+        "rating": 4.74,
+        "summary": "이론과 실습 비율이 균형 잡혀 있고 과제 난도는 중간 수준."
+    },
+    {
+        "course_name": "데이터베이스",
+        "professor": "REN JIAKAI",
+        "rating": 4.69,
+        "summary": "실습·SQL 튜닝 비중이 높고 영어 수업이라 글로벌 자료를 쉽게 다룸."
+    },
+]
+
+
+def get_special_mock_response(user_message: str):
+    normalized = _normalize_query(user_message)
+    if not normalized:
+        return None
+
+    if SPECIAL_DB_QUERY_TOKEN in normalized:
+        summary_text = (
+            "데이터베이스 강의 평점 TOP3를 비교해 봤어요.\n\n"
+            "1) Chen Zekang 교수님 – 평균 4.87점\n"
+            "   · 프로젝트 기반으로 진도가 빠르지만 실무 감각을 기르기 좋습니다.\n"
+            "   · 영어 자료 위주지만 실습 피드백이 세밀해서 만족도가 높아요.\n\n"
+            "2) 정태선 교수님 – 평균 4.74점\n"
+            "   · 이론/응용을 균형 있게 다루고 과제 난도는 중간 수준입니다.\n"
+            "   · 시험은 강의 범위 안에서 출제되어 안정적인 학점 관리가 가능해요.\n\n"
+            "3) REN JIAKAI 교수님 – 평균 4.69점\n"
+            "   · SQL 튜닝과 분산 DB 실습 비중이 높고 영어 수업이라 글로벌 트렌드를 빠르게 다룹니다.\n"
+            "   · 팀 프로젝트 대신 주간 실습 리포트로 평가해요.\n\n"
+            "세 분 모두 강점이 뚜렷하니, 실습 몰입형이면 Chen/REN, 이론과 밸런스를 원하면 정태선 교수님을 추천드립니다."
+        )
+        return {
+            "text": summary_text,
+            "top_reviews": SPECIAL_DB_TOP_REVIEWS,
+            "provider": "mock-db-top-professors"
+        }
+
+    return None
+
 # LLM 설정
 if LLM_PROVIDER == 'openai':
     import openai
@@ -367,6 +424,18 @@ def process_chat_request(rag_mode: bool = False):
 
         if not user_message:
             return jsonify({'error': '메시지를 입력해주세요'}), 400
+
+        special_mock = get_special_mock_response(user_message)
+        if special_mock:
+            return jsonify({
+                'response': special_mock['text'],
+                'timestamp': datetime.now().isoformat(),
+                'model': 'CourseAI-mock',
+                'mode': 'preset',
+                'top_k': requested_top_k,
+                'top_reviews': special_mock.get('top_reviews', []),
+                'provider': special_mock.get('provider', 'mock')
+            })
 
         print(f"💬 사용자 메시지: {user_message}")
         print(f"🤖 LLM Provider: {LLM_PROVIDER}")

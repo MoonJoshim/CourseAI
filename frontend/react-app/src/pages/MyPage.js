@@ -44,7 +44,7 @@ const MyPage = () => {
 
   if (!user) {
     return (
-      <div className="min-h-screen" style={{background: 'linear-gradient(135deg, #D4F0F0 0%, #CCE2CB 100%)'}}>
+      <div className="min-h-screen bg-slate-50">
         <div className="max-w-4xl mx-auto px-6 py-12">
           <div className="bg-white rounded-lg border p-8" style={{borderColor: '#B6CFB6'}}>
             <h2 className="text-2xl font-bold text-slate-900 mb-6 text-center">로그인</h2>
@@ -56,7 +56,7 @@ const MyPage = () => {
   }
 
   return (
-    <div className="min-h-screen" style={{background: 'linear-gradient(135deg, #D4F0F0 0%, #CCE2CB 100%)'}}>
+    <div className="min-h-screen bg-slate-50">
       {/* Header */}
       <div className="bg-white border-b" style={{borderColor: '#B6CFB6'}}>
         <div className="max-w-4xl mx-auto px-6 py-5">
