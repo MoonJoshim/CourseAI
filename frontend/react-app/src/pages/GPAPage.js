@@ -139,6 +139,35 @@ const GPAPage = () => {
     }
   };
 
+  // C+ 이하 과목 재수강 추천
+  const retakeRecommendations = useMemo(() => {
+    const lowGradeCourses = selectedCourses.filter(course => 
+      ['C+', 'C0', 'D+', 'D0', 'F'].includes(course.grade) && course.name.trim()
+    );
+
+    if (lowGradeCourses.length === 0) return [];
+
+    const recommendations = lowGradeCourses.map(course => {
+      const currentPoint = gradeToPoint[course.grade];
+      const credits = Number(course.credits);
+      const potentialGain = (4.5 - currentPoint) * credits / totalCourseCredits;
+
+      return {
+        courseName: course.name,
+        currentGrade: course.grade,
+        credits: credits,
+        currentPoint: currentPoint.toFixed(1),
+        potentialGain: potentialGain.toFixed(2),
+        priority: potentialGain,
+        recommendation: currentPoint <= 2.0 
+          ? '필수 재수강 권장 - 학점 영향도가 큽니다'
+          : '재수강 고려 - 평점 향상에 도움이 됩니다'
+      };
+    });
+
+    return recommendations.sort((a, b) => b.priority - a.priority);
+  }, [selectedCourses, totalCourseCredits]);
+
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Header */}
@@ -209,6 +238,35 @@ const GPAPage = () => {
 
       {/* Content */}
       <div className="max-w-6xl mx-auto px-6 py-5">
+        {/* Retake Recommendations */}
+        {retakeRecommendations.length > 0 && (
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-5 mb-4">
+            <h3 className="text-base font-bold text-amber-900 mb-3">📌 재수강 추천</h3>
+            <p className="text-sm text-amber-800 mb-4">C+ 이하 성적의 과목이 발견되었습니다. 재수강을 고려해보세요.</p>
+            <div className="space-y-2">
+              {retakeRecommendations.map((rec, index) => (
+                <div key={index} className="bg-white rounded-lg p-4 border border-amber-200">
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <h4 className="font-bold text-slate-900 mb-1">{rec.courseName}</h4>
+                      <p className="text-sm text-slate-600">
+                        현재 성적: <span className="font-semibold text-red-600">{rec.currentGrade}</span> ({rec.currentPoint}점) • {rec.credits}학점
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-lg font-bold text-slate-900">+{rec.potentialGain}</p>
+                      <p className="text-xs text-slate-500">예상 향상</p>
+                    </div>
+                  </div>
+                  <p className="text-xs text-amber-700 bg-amber-50 px-3 py-2 rounded border border-amber-200">
+                    {rec.recommendation}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* GPA Calculator */}
           <div className="bg-white rounded-lg border border-slate-200 p-5">
