@@ -30,8 +30,8 @@ const ChatPage = () => {
     setInputMessage('');
 
     try {
-      const host = window.location.hostname;
-      const url = `http://${host}:5003/api/chat`;
+      const apiUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5002';
+      const url = `${apiUrl}/api/chat`;
       const history = messages
         .filter(m => m.type === 'user' || m.type === 'assistant')
         .reduce((acc, m, idx, arr) => {
