@@ -170,7 +170,7 @@ const ChatPage = () => {
                   ? 'text-white rounded-tr-sm'
                   : 'bg-slate-50 border border-slate-200 rounded-tl-sm'
               }`}
-              style={message.type === 'user' ? {background: 'linear-gradient(to right, #8FCACA, #97C1A9)'} : {}}
+              style={message.type === 'user' ? {backgroundColor: '#8FCACA'} : {}}
             >
               <p
                 className={`text-sm leading-relaxed ${
