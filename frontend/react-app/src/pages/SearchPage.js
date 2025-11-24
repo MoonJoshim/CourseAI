@@ -32,7 +32,7 @@ const SearchPage = ({
     setHasSearched(true);
 
     try {
-      const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5002';
+      const apiUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5002';
       const response = await fetch(`${apiUrl}/api/search?keyword=${encodeURIComponent(searchQuery)}`);
       
       if (!response.ok) {
