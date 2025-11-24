@@ -77,8 +77,8 @@ const SearchPage = ({
       <div className="bg-white border-b border-slate-200">
         <div className="max-w-6xl mx-auto px-6 py-5">
           <div className="mb-4">
-            <h1 className="text-2xl font-bold text-slate-900 mb-1">강의 검색</h1>
-            <p className="text-sm text-slate-600">실제 수강생 강의평을 바탕으로 한 평가</p>
+            <h1 className="text-2xl font-bold text-slate-900 mb-1">과목별 강의평 조회</h1>
+            <p className="text-sm text-slate-600">실제 수강생들의 강의평을 바탕으로 한 평가를 확인하세요</p>
           </div>
 
           {/* Stats */}

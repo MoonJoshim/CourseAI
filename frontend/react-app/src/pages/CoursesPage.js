@@ -218,11 +218,11 @@ const CoursesPage = () => {
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Header */}
-      <div className="bg-white border-b border-slate-200 shadow-sm">
-        <div className="max-w-7xl mx-auto px-6 py-6">
-          <div className="mb-5">
+      <div className="bg-white border-b border-slate-200">
+        <div className="max-w-6xl mx-auto px-6 py-5">
+          <div className="mb-4">
             <h1 className="text-2xl font-bold text-slate-900 mb-1">개설과목 현황</h1>
-            <p className="text-sm text-slate-600">2025-2학기 소프트웨어학과 개설과목</p>
+            <p className="text-sm text-slate-600">2025-2학기 개설된 모든 과목을 확인하세요</p>
           </div>
 
           {/* Tabs */}
