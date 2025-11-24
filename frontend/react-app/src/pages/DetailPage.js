@@ -93,15 +93,40 @@ const DetailPage = ({ selectedCourse, mockCourses }) => {
         </div>
 
         <div className="grid grid-cols-3 gap-4">
-          {/* AI Summary */}
-          {course.aiSummary && (
-            <div className="col-span-2 bg-white rounded-lg border border-slate-200 p-6">
-              <h3 className="text-base font-bold text-slate-900 mb-4">수강생 평가 요약</h3>
-              <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-                <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">{course.aiSummary}</p>
+          {/* Reviews */}
+          <div className="col-span-2 space-y-4">
+            {/* AI Summary */}
+            {course.aiSummary && (
+              <div className="bg-white rounded-lg border border-slate-200 p-6">
+                <h3 className="text-base font-bold text-slate-900 mb-4">수강생 평가 요약</h3>
+                <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                  <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">{course.aiSummary}</p>
+                </div>
               </div>
-            </div>
-          )}
+            )}
+
+            {/* Actual Reviews */}
+            {course.reviewCount > 0 && (
+              <div className="bg-white rounded-lg border border-slate-200 p-6">
+                <h3 className="text-base font-bold text-slate-900 mb-4">강의평 ({course.reviewCount})</h3>
+                <div className="space-y-3">
+                  {/* Mock reviews based on course data */}
+                  {Array.from({length: Math.min(course.reviewCount, 5)}, (_, i) => (
+                    <div key={i} className="p-4 bg-slate-50 rounded-lg border border-slate-200">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="flex items-center gap-1">
+                          <Star className="w-4 h-4 text-amber-500 fill-current" />
+                          <span className="font-bold text-slate-900">{course.rating}</span>
+                        </div>
+                        <span className="text-xs text-slate-500">• {course.semester || '2024-2'}</span>
+                      </div>
+                      <p className="text-sm text-slate-700">{course.aiSummary ? course.aiSummary.split('.')[i] || '좋은 강의였습니다.' : '좋은 강의였습니다.'}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* Tags & Info */}
           <div className="space-y-4">

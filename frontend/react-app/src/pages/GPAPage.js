@@ -240,12 +240,12 @@ const GPAPage = () => {
       <div className="max-w-6xl mx-auto px-6 py-5">
         {/* Retake Recommendations */}
         {retakeRecommendations.length > 0 && (
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-5 mb-4">
-            <h3 className="text-base font-bold text-amber-900 mb-3">📌 재수강 추천</h3>
-            <p className="text-sm text-amber-800 mb-4">C+ 이하 성적의 과목이 발견되었습니다. 재수강을 고려해보세요.</p>
+          <div className="bg-white border-2 border-red-500 rounded-lg p-5 mb-4">
+            <h3 className="text-base font-bold text-red-600 mb-3">⚠️ 재수강 추천</h3>
+            <p className="text-sm text-slate-700 mb-4">C+ 이하 성적의 과목이 발견되었습니다. 재수강을 고려해보세요.</p>
             <div className="space-y-2">
               {retakeRecommendations.map((rec, index) => (
-                <div key={index} className="bg-white rounded-lg p-4 border border-amber-200">
+                <div key={index} className="bg-slate-50 rounded-lg p-4 border border-slate-200">
                   <div className="flex justify-between items-start mb-2">
                     <div>
                       <h4 className="font-bold text-slate-900 mb-1">{rec.courseName}</h4>
@@ -258,7 +258,7 @@ const GPAPage = () => {
                       <p className="text-xs text-slate-500">예상 향상</p>
                     </div>
                   </div>
-                  <p className="text-xs text-amber-700 bg-amber-50 px-3 py-2 rounded border border-amber-200">
+                  <p className="text-xs text-red-700 bg-red-50 px-3 py-2 rounded border border-red-200">
                     {rec.recommendation}
                   </p>
                 </div>
