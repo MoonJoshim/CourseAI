@@ -15,7 +15,7 @@
     "semester": "2024-2",
     "timeSlot": "-",
     "room": "-",
-    "aiSummary": "교수님이 매우 친절하시고 수강생들을 모두 이해시키려고 노력하신다 강의자료도 도움이 많이 되었고 한국어도 잘하셔서 알아듣는데 불편함은 전혀 없었다 실습이나 과제도 복습 틈틈이 하는 사람들에게는 크게 어렵지 않은 수준 이때까지 들은 프로그래밍 수업 중에서 가장 이해가 잘 ...",
+    "aiSummary": "하나라도 더 알려주려고 노력 많이 하십니다 질문도 잘 받아주시고 다 좋았어요 교수님이 매우 친절하시고 수강생들을 모두 이해시키려고 노력하신다 강의자료도 도움이 많이 되었고 한국어도 잘하셔서 알아듣는데 불편함은 전혀 없었다 실습이나 과제도 복습 틈틈이 하는 사람들에게는 ...",
     "sentiment": 100,
     "difficulty": 3,
     "workload": 3,
@@ -25,8 +25,8 @@
     "keywords": []
   },
   {
-    "id": 5,
-    "courseCode": "SCE305",
+    "id": 10,
+    "courseCode": "SCE310",
     "name": "데이터베이스",
     "professor": "최정인",
     "department": "소프트웨어학과",
@@ -53,8 +53,8 @@
     "keywords": []
   },
   {
-    "id": 20,
-    "courseCode": "SCE320",
+    "id": 23,
+    "courseCode": "SCE323",
     "name": "객체지향및프로그래밍실습",
     "professor": "오상은",
     "department": "소프트웨어학과",
@@ -69,7 +69,7 @@
     "semester": "2023-1",
     "timeSlot": "-",
     "room": "-",
-    "aiSummary": "정말 만족스러운 수업 교수님의 너그러움에 감탄하고 갑니다 재수강이었는데 그 전 교수님이랑은 비교도 안 될 정도로 꼼꼼하게 잘 가르쳐주신다...",
+    "aiSummary": "중요한 내용이나 모르고 지나칠 부분까지 자세히 알려주시고 교수님도 친절하십니다 추천 또 추천 정말 만족스러운 수업 교수님의 너그러움에 감탄하고 갑니다...",
     "sentiment": 96,
     "difficulty": 3,
     "workload": 3,
@@ -79,8 +79,34 @@
     "keywords": []
   },
   {
-    "id": 16,
-    "courseCode": "SCE316",
+    "id": 25,
+    "courseCode": "SCE325",
+    "name": "웹시스템설계",
+    "professor": "오상윤",
+    "department": "소프트웨어학과",
+    "credits": 3,
+    "rating": 4.7,
+    "reviewCount": 6,
+    "popularity": 18,
+    "tags": [
+      "노팀플",
+      "과제많음"
+    ],
+    "semester": "2024-2",
+    "timeSlot": "-",
+    "room": "-",
+    "aiSummary": "웹프론트부터 백엔드까지 전체적으로 다뤄주심 웹을 진로로 하거나 혹은 소웨라서 웹을 혼자서 구축하는 능력을 기르고 싶다면 꼭 들으세요 html css부터 nodejs 리액트 몽고디비까지 모두 다루며 프로젝트로 협업 기회까지 주는 웹 배우기에는 최고의 강의입니다 교수님 강...",
+    "sentiment": 93,
+    "difficulty": 3,
+    "workload": 3,
+    "gradeGenerosity": 4,
+    "bookmarked": false,
+    "trend": "up",
+    "keywords": []
+  },
+  {
+    "id": 6,
+    "courseCode": "SCE306",
     "name": "계산이론",
     "professor": "조다정",
     "department": "소프트웨어학과",
@@ -106,8 +132,8 @@
     "keywords": []
   },
   {
-    "id": 12,
-    "courseCode": "SCE312",
+    "id": 1,
+    "courseCode": "SCE301",
     "name": "인공지능",
     "professor": "유종빈",
     "department": "소프트웨어학과",
@@ -134,8 +160,8 @@
     "keywords": []
   },
   {
-    "id": 18,
-    "courseCode": "SCE318",
+    "id": 21,
+    "courseCode": "SCE321",
     "name": "객체지향프로그래밍및실습",
     "professor": "오윤진",
     "department": "소프트웨어학과",
@@ -159,8 +185,8 @@
     "keywords": []
   },
   {
-    "id": 11,
-    "courseCode": "SCE311",
+    "id": 2,
+    "courseCode": "SCE302",
     "name": "실전코딩1",
     "professor": "최재영",
     "department": "소프트웨어학과",
@@ -175,7 +201,7 @@
     "semester": "2025-2",
     "timeSlot": "-",
     "room": "-",
-    "aiSummary": "여러가지에 대해 골고루 배울 수 있는 강의였다.\n뭘 해야할지 모르면 이 강의 들으면서 재미있는 걸 찾아보는 것도 좋을듯 부담없이 수강하기에 좋습니다!\n과제도 거의 없는 편입니다...",
+    "aiSummary": "부담없이 수강하기에 좋습니다!\n과제도 거의 없는 편입니다 p/f 과목이라 부담없이 하라는 과제만 하면 됩니다.\n과제도 어렵지 않고 내용도 좋은 거 같습니다...",
     "sentiment": 88,
     "difficulty": 3,
     "workload": 3,
@@ -185,8 +211,8 @@
     "keywords": []
   },
   {
-    "id": 13,
-    "courseCode": "SCE313",
+    "id": 3,
+    "courseCode": "SCE303",
     "name": "기계학습",
     "professor": "손경아",
     "department": "소프트웨어학과",
@@ -213,35 +239,8 @@
     "keywords": []
   },
   {
-    "id": 1,
-    "courseCode": "SCE301",
-    "name": "컴퓨터네트워크",
-    "professor": "ALI JEHAD",
-    "department": "소프트웨어학과",
-    "credits": 3,
-    "rating": 4.2,
-    "reviewCount": 9,
-    "popularity": 27,
-    "tags": [
-      "과제많음",
-      "쉬움",
-      "성적잘줌"
-    ],
-    "semester": "2025-1",
-    "timeSlot": "-",
-    "room": "-",
-    "aiSummary": "영어에 자신없으면 구글 velog의 컴네해설 참고\n강의 듣다보면 내용은 이해 가능\n시험은 어렵지 않은 편 나도 영어 잘하는 편 아닌데 이해는 가능\n시험은 강노트 위주 계산 문제\n단위 실수 조심하라고 함...",
-    "sentiment": 84,
-    "difficulty": 3,
-    "workload": 3,
-    "gradeGenerosity": 4,
-    "bookmarked": false,
-    "trend": "up",
-    "keywords": []
-  },
-  {
-    "id": 14,
-    "courseCode": "SCE314",
+    "id": 4,
+    "courseCode": "SCE304",
     "name": "SW캡스톤디자인",
     "professor": "윤대균",
     "department": "소프트웨어학과",
@@ -267,8 +266,35 @@
     "keywords": []
   },
   {
-    "id": 4,
-    "courseCode": "SCE304",
+    "id": 16,
+    "courseCode": "SCE316",
+    "name": "컴퓨터네트워크",
+    "professor": "ALI JEHAD",
+    "department": "소프트웨어학과",
+    "credits": 3,
+    "rating": 4.2,
+    "reviewCount": 9,
+    "popularity": 27,
+    "tags": [
+      "과제많음",
+      "쉬움",
+      "성적잘줌"
+    ],
+    "semester": "2025-1",
+    "timeSlot": "-",
+    "room": "-",
+    "aiSummary": "스스로 공부하면 충분히 A+ 가능\n교수님 되게 친절하세요\n퀴즈문제 안나와요\n키즈 몇번 교수님 한국말 잘하심, 퇴근하실때 만났는데 인사해주셨어요\n발표 진짜 못했는데 성적 잘 주셨어요 영어에 자신없으면 구글 velog의 컴네해설 참고\n강의 듣다보면 내용은 이해 가능\n시험은...",
+    "sentiment": 84,
+    "difficulty": 3,
+    "workload": 3,
+    "gradeGenerosity": 4,
+    "bookmarked": false,
+    "trend": "up",
+    "keywords": []
+  },
+  {
+    "id": 15,
+    "courseCode": "SCE315",
     "name": "컴퓨터네트워크",
     "professor": "최영준",
     "department": "소프트웨어학과",
@@ -294,8 +320,8 @@
     "keywords": []
   },
   {
-    "id": 3,
-    "courseCode": "SCE303",
+    "id": 13,
+    "courseCode": "SCE313",
     "name": "컴퓨터네트워크",
     "professor": "강경란",
     "department": "소프트웨어학과",
@@ -321,8 +347,8 @@
     "keywords": []
   },
   {
-    "id": 9,
-    "courseCode": "SCE309",
+    "id": 17,
+    "courseCode": "SCE317",
     "name": "데이터베이스",
     "professor": "Rize Jin",
     "department": "소프트웨어학과",
@@ -346,8 +372,8 @@
     "keywords": []
   },
   {
-    "id": 15,
-    "courseCode": "SCE315",
+    "id": 5,
+    "courseCode": "SCE305",
     "name": "실전코딩2",
     "professor": "이환용",
     "department": "소프트웨어학과",
@@ -373,8 +399,8 @@
     "keywords": []
   },
   {
-    "id": 7,
-    "courseCode": "SCE307",
+    "id": 12,
+    "courseCode": "SCE312",
     "name": "컴퓨터네트워크",
     "professor": "김재현",
     "department": "소프트웨어학과",
@@ -400,8 +426,33 @@
     "keywords": []
   },
   {
-    "id": 6,
-    "courseCode": "SCE306",
+    "id": 26,
+    "courseCode": "SCE326",
+    "name": "컴퓨터통신",
+    "professor": "조영종",
+    "department": "소프트웨어학과",
+    "credits": 3,
+    "rating": 3.8,
+    "reviewCount": 4,
+    "popularity": 12,
+    "tags": [
+      "과제많음"
+    ],
+    "semester": "2023-2",
+    "timeSlot": "-",
+    "room": "-",
+    "aiSummary": "강의 자체는 상당히 유익하다 통신에 대해 매우 깊게 알려주시며 현대에 통신이 들어가지 않는 곳은 없다보니 정말 로우한 지식들을 얻기에 좋다 뿐만 아니라 단순한 학점관리 시험공부가 아닌 진짜 공부로 성공하기 위해 해야 하는 중요한 것들을 많이 알려주신다 조금 꼰대같이 느...",
+    "sentiment": 75,
+    "difficulty": 3,
+    "workload": 3,
+    "gradeGenerosity": 3,
+    "bookmarked": false,
+    "trend": "down",
+    "keywords": []
+  },
+  {
+    "id": 11,
+    "courseCode": "SCE311",
     "name": "컴퓨터네트워크",
     "professor": "Paul Rajib",
     "department": "소프트웨어학과",
@@ -427,8 +478,8 @@
     "keywords": []
   },
   {
-    "id": 10,
-    "courseCode": "SCE310",
+    "id": 9,
+    "courseCode": "SCE309",
     "name": "데이터베이스",
     "professor": "정태선",
     "department": "소프트웨어학과",
@@ -455,8 +506,8 @@
     "keywords": []
   },
   {
-    "id": 21,
-    "courseCode": "SCE321",
+    "id": 18,
+    "courseCode": "SCE318",
     "name": "객체지향및프로그래밍실습",
     "professor": "류기열",
     "department": "소프트웨어학과",
@@ -470,7 +521,7 @@
     "semester": "2023-2",
     "timeSlot": "-",
     "room": "-",
-    "aiSummary": "교수님께서 유쾌하십니다 강의력은 잘 모르겠습니다 강의력 보통 말은 알아듣기 쉽지 않아서 개인적으로 공부하는게 더 나을 수도 있음 과제들이랑 교수님이 중요하다고 했던 것들을 꼭 외워가면 시험은 어느 정도 맞출 수 있음...",
+    "aiSummary": "스스로 자바 공부함 수업중에 중요하다고 하시는 부분 잘 듣고 시험보면 좋을듯 교수님께서 유쾌하십니다 강의력은 잘 모르겠습니다...",
     "sentiment": 63,
     "difficulty": 3,
     "workload": 3,
@@ -508,8 +559,8 @@
     "keywords": []
   },
   {
-    "id": 2,
-    "courseCode": "SCE302",
+    "id": 14,
+    "courseCode": "SCE314",
     "name": "데이터베이스",
     "professor": "변광준",
     "department": "소프트웨어학과",
@@ -536,8 +587,34 @@
     "keywords": []
   },
   {
-    "id": 22,
-    "courseCode": "SCE322",
+    "id": 24,
+    "courseCode": "SCE324",
+    "name": "확률및통계1",
+    "professor": "조영종",
+    "department": "소프트웨어학과",
+    "credits": 3,
+    "rating": 2.3,
+    "reviewCount": 13,
+    "popularity": 39,
+    "tags": [
+      "과제많음",
+      "쉬움"
+    ],
+    "semester": "2024-1",
+    "timeSlot": "-",
+    "room": "-",
+    "aiSummary": "많이 배울 수 있으나 그만큼 힘듬 교수성격은 덤 어느 장단에 맞춰서 공부해야할지 모르겠다 방향성이 없는듯...",
+    "sentiment": 46,
+    "difficulty": 3,
+    "workload": 3,
+    "gradeGenerosity": 2,
+    "bookmarked": false,
+    "trend": "down",
+    "keywords": []
+  },
+  {
+    "id": 20,
+    "courseCode": "SCE320",
     "name": "객체지향및프로그래밍실습",
     "professor": "PAUL RAJIB",
     "department": "소프트웨어학과",
@@ -551,7 +628,7 @@
     "semester": "2023-2",
     "timeSlot": "-",
     "room": "-",
-    "aiSummary": "수업이 어떤가를 떠나서 나처럼 영어 못하는 사람한테는 인도식 영어 수업은 정말 최악이었음 그래도 수업 자체의 난이도는 괜찮았던 기억이 있음 강의 들자마자 지난 날의 선택을 후회함 에이비 비율 사십칠프로라고 메일 답장 주셨는데 삼프로 왜 안 채우는지 의문이 든다 시험들이...",
+    "aiSummary": "밑에 말대로 학점 에이를 사십칠퍼나 줘서 에이플 꺼억 했습니다 강의는 발음을 어찌어찌하면 들을만 할 것 같고 메일 피드백도 생각보다 빨랐습니다 학점은 결론적으로 잘 받았지만 과제에서 제시한 부분이 뭔지 이해하기 어려운 경우가 많았고 영어를 이해하기 어려워서 독학으로 공...",
     "sentiment": 36,
     "difficulty": 3,
     "workload": 3,
@@ -561,8 +638,8 @@
     "keywords": []
   },
   {
-    "id": 23,
-    "courseCode": "SCE323",
+    "id": 22,
+    "courseCode": "SCE322",
     "name": "객체지향및프로그래밍실습",
     "professor": "YARED",
     "department": "소프트웨어학과",
@@ -578,7 +655,7 @@
     "semester": "2024-1",
     "timeSlot": "-",
     "room": "-",
-    "aiSummary": "강의는 안 듣고 독학했더니 그래도 학점은 잘 주십니다 강의는 정말 힘듭니다 파이썬이랑 씨 씨 정도만 아는 상태에서 자바는 처음으로 해봤는데 독학으로 중간 기말 합해서 십칠인가 보면 시험 자체는 그냥 처음부터 혼자 하는거라는데 전체 깔아두고 하면 할만합니다 저는 개인적으...",
+    "aiSummary": "최악의 강의 과제는 무슨 프로젝트 하는줄 알겠다 쓰레기 같은 과제에 강노는 베껴다 읽기만 하면서 제일 짜증나는건 강노를 안 올려줘서 학생들이 사진으로 수업시간에 찍고 있는데 그래도 이주 지나서 올려주더라 재수강으로 양학하는 사람들이나 진짜 배울거 다 배워서 백엔드 프론...",
     "sentiment": 30,
     "difficulty": 3,
     "workload": 3,
@@ -588,8 +665,8 @@
     "keywords": []
   },
   {
-    "id": 17,
-    "courseCode": "SCE317",
+    "id": 7,
+    "courseCode": "SCE307",
     "name": "분산병렬컴퓨팅",
     "professor": "오상윤",
     "department": "소프트웨어학과",
