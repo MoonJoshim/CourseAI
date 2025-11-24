@@ -57,7 +57,9 @@ venv.bak/
 *~
 
 # 크롤링 데이터
-data/
+/data/
+/backend/data/
+/pipeline/data/
 *.html
 
 # 로그 파일
