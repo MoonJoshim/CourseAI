@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Search, Grid, List, BookOpen, User, Clock, Star, GraduationCap, Filter } from 'lucide-react';
+import { Search, Grid, List, BookOpen, User, Clock, Star, GraduationCap } from 'lucide-react';
 import softwareCourses from '../data/softwareCourses.json';
 
 const REQUIRED_COURSES = [
@@ -12,13 +12,12 @@ const REQUIRED_COURSES = [
 ];
 
 const CoursesPage = () => {
-  const [activeTab, setActiveTab] = useState('required'); // required, elective, general
+  const [activeTab, setActiveTab] = useState('required');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState('');
   const [viewMode, setViewMode] = useState('grid');
   const [sortBy, setSortBy] = useState('course_name');
 
-  // 과목 분류
   const categorizedCourses = useMemo(() => {
     const required = [];
     const elective = [];
@@ -34,7 +33,6 @@ const CoursesPage = () => {
     return { required, elective, general: [] };
   }, []);
 
-  // 현재 탭의 과목들
   const currentCourses = useMemo(() => {
     let courses = [];
     switch (activeTab) {
@@ -53,11 +51,9 @@ const CoursesPage = () => {
     return courses;
   }, [activeTab, categorizedCourses]);
 
-  // 필터링 및 정렬
   const filteredCourses = useMemo(() => {
     let filtered = [...currentCourses];
 
-    // 검색어 필터
     if (searchTerm.trim()) {
       const query = searchTerm.toLowerCase();
       filtered = filtered.filter(course =>
@@ -68,12 +64,10 @@ const CoursesPage = () => {
       );
     }
 
-    // 학과 필터
     if (selectedDepartment) {
       filtered = filtered.filter(course => course.department === selectedDepartment);
     }
 
-    // 정렬
     filtered.sort((a, b) => {
       switch (sortBy) {
         case 'course_name':
@@ -90,22 +84,21 @@ const CoursesPage = () => {
     return filtered;
   }, [currentCourses, searchTerm, selectedDepartment, sortBy]);
 
-  // 고유 학과 목록
   const departments = useMemo(() => {
     const depts = new Set(currentCourses.map(course => course.department));
     return ['', ...Array.from(depts).sort()];
   }, [currentCourses]);
 
   const CourseCard = ({ course }) => (
-    <div className="bg-gradient-to-br from-white to-slate-50/50 rounded-lg hover:shadow-md transition-all duration-200 p-4 border border-slate-200 hover:border-blue-400">
+    <div className="bg-white rounded-lg hover:shadow-md transition-all duration-200 p-4 border border-slate-200">
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1">
           <h3 className="text-base font-bold text-slate-900 mb-1">{course.course_name}</h3>
           <p className="text-xs text-slate-500 mb-1">{course.course_english_name}</p>
-          <p className="text-xs text-blue-600 font-medium">{course.course_code}</p>
+          <p className="text-xs text-slate-600 font-medium">{course.course_code}</p>
         </div>
         <div className="flex gap-1.5">
-          <span className="bg-blue-50 text-blue-700 text-xs px-2 py-0.5 rounded border border-blue-200">
+          <span className="bg-slate-100 text-slate-700 text-xs px-2 py-0.5 rounded border border-slate-200">
             {course.credits}학점
           </span>
           <span className="bg-slate-100 text-slate-700 text-xs px-2 py-0.5 rounded border border-slate-200">
@@ -155,14 +148,14 @@ const CoursesPage = () => {
   );
 
   const CourseListItem = ({ course }) => (
-    <div className="bg-gradient-to-r from-white to-slate-50/50 rounded-lg hover:shadow-md transition-all duration-200 p-4 border border-slate-200 hover:border-blue-400">
+    <div className="bg-white rounded-lg hover:shadow-md transition-all duration-200 p-4 border border-slate-200">
       <div className="flex items-center justify-between">
         <div className="flex-1">
           <div className="flex items-center gap-4 mb-2">
             <h3 className="text-base font-bold text-slate-900">{course.course_name}</h3>
-            <span className="text-xs text-blue-600 font-medium">{course.course_code}</span>
+            <span className="text-xs text-slate-600 font-medium">{course.course_code}</span>
             <div className="flex gap-1.5">
-              <span className="bg-blue-50 text-blue-700 text-xs px-2 py-0.5 rounded border border-blue-200">
+              <span className="bg-slate-100 text-slate-700 text-xs px-2 py-0.5 rounded border border-slate-200">
                 {course.credits}학점
               </span>
               <span className="bg-slate-100 text-slate-700 text-xs px-2 py-0.5 rounded border border-slate-200">
@@ -204,7 +197,7 @@ const CoursesPage = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/20 to-slate-50">
+    <div className="min-h-screen bg-slate-50">
       {/* Header */}
       <div className="bg-white border-b border-slate-200">
         <div className="max-w-6xl mx-auto px-6 py-5">
@@ -219,9 +212,10 @@ const CoursesPage = () => {
               onClick={() => setActiveTab('required')}
               className={`px-5 py-2 rounded-lg font-medium transition-all text-sm ${
                 activeTab === 'required'
-                  ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-sm'
+                  ? 'text-white'
                   : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'
               }`}
+              style={activeTab === 'required' ? {background: 'linear-gradient(to right, #8FCACA, #97C1A9)'} : {}}
             >
               전공필수
             </button>
@@ -229,9 +223,10 @@ const CoursesPage = () => {
               onClick={() => setActiveTab('elective')}
               className={`px-5 py-2 rounded-lg font-medium transition-all text-sm ${
                 activeTab === 'elective'
-                  ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-sm'
+                  ? 'text-white'
                   : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'
               }`}
+              style={activeTab === 'elective' ? {background: 'linear-gradient(to right, #8FCACA, #97C1A9)'} : {}}
             >
               전공선택
             </button>
@@ -239,9 +234,10 @@ const CoursesPage = () => {
               onClick={() => setActiveTab('general')}
               className={`px-5 py-2 rounded-lg font-medium transition-all text-sm ${
                 activeTab === 'general'
-                  ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-sm'
+                  ? 'text-white'
                   : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'
               }`}
+              style={activeTab === 'general' ? {background: 'linear-gradient(to right, #8FCACA, #97C1A9)'} : {}}
             >
               교양선택
             </button>
@@ -256,14 +252,14 @@ const CoursesPage = () => {
                 placeholder="과목명, 교수명, 과목코드로 검색"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none text-sm"
               />
             </div>
 
             <select
               value={selectedDepartment}
               onChange={(e) => setSelectedDepartment(e.target.value)}
-              className="px-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm"
+              className="px-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none bg-white text-sm"
             >
               <option value="">전체 학과</option>
               {departments.map(dept => dept && (
@@ -274,7 +270,7 @@ const CoursesPage = () => {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="px-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm"
+              className="px-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none bg-white text-sm"
             >
               <option value="course_name">과목명순</option>
               <option value="professor">교수명순</option>
@@ -285,7 +281,7 @@ const CoursesPage = () => {
               <button
                 onClick={() => setViewMode('grid')}
                 className={`p-2 rounded-md transition-colors ${
-                  viewMode === 'grid' ? 'bg-white text-blue-600' : 'text-slate-500 hover:text-slate-700'
+                  viewMode === 'grid' ? 'bg-white shadow-sm' : 'text-slate-500 hover:text-slate-700'
                 }`}
               >
                 <Grid className="w-4 h-4" />
@@ -293,7 +289,7 @@ const CoursesPage = () => {
               <button
                 onClick={() => setViewMode('list')}
                 className={`p-2 rounded-md transition-colors ${
-                  viewMode === 'list' ? 'bg-white text-blue-600' : 'text-slate-500 hover:text-slate-700'
+                  viewMode === 'list' ? 'bg-white shadow-sm' : 'text-slate-500 hover:text-slate-700'
                 }`}
               >
                 <List className="w-4 h-4" />
@@ -306,12 +302,12 @@ const CoursesPage = () => {
       {/* Content */}
       <div className="max-w-6xl mx-auto px-6 py-5">
         {/* Results Info */}
-        <div className="mb-4 flex items-center justify-between">
+        <div className="mb-4">
           <p className="text-sm text-slate-600">
             {searchTerm ? (
-              <>검색 결과 <span className="font-semibold text-blue-600">{filteredCourses.length}</span>개</>
+              <>검색 결과 <span className="font-semibold text-slate-900">{filteredCourses.length}</span>개</>
             ) : (
-              <>총 <span className="font-semibold text-blue-600">{filteredCourses.length}</span>개 과목</>
+              <>총 <span className="font-semibold text-slate-900">{filteredCourses.length}</span>개 과목</>
             )}
           </p>
         </div>

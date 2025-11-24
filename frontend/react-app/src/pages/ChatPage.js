@@ -1,8 +1,7 @@
 import React, { useState, useRef } from 'react';
-import { MessageSquare, Send, User, Brain, Info, PauseCircle } from 'lucide-react';
+import { MessageSquare, Send, User, PauseCircle } from 'lucide-react';
 
 const CHAT_ENDPOINT = '/api/rag/chat';
-// 기본값: 현재 도메인의 /api/rag/chat 으로 보냄 (Vercel rewrites가 백엔드로 프록시)
 const RAW_API_BASE = (process.env.REACT_APP_AI_API_BASE_URL || '').replace(/\/$/, '');
 const API_BASE =
   typeof window !== 'undefined' &&
@@ -63,16 +62,13 @@ const ChatPage = () => {
       }, []);
 
     const endpoint = API_BASE ? `${API_BASE}${CHAT_ENDPOINT}` : CHAT_ENDPOINT;
-
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
     abortControllerRef.current = controller;
 
     try {
       setIsSending(true);
-
       const payload = { message: currentInput, history, top_k: DEFAULT_TOP_K };
-
       const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -80,41 +76,42 @@ const ChatPage = () => {
         signal: controller.signal,
       });
 
+      clearTimeout(timeoutId);
+
       if (!res.ok) {
-        const errorPayload = await res.json().catch(() => ({}));
-        throw new Error(errorPayload.error || res.statusText);
+        throw new Error(`HTTP ${res.status}`);
       }
 
       const data = await res.json();
-
-      const text =
-        data.response || data.ai_response || data.error || '응답을 불러오지 못했습니다.';
-
+      const content = data.response || data.answer || '응답을 받지 못했습니다.';
       const aiResponse = {
         id: Date.now(),
         type: 'assistant',
-        content: text,
+        content,
         timestamp: new Date(),
         metadata: {
-          provider: data.llm_provider || data.model || 'unknown',
-          ragEnabled: Boolean(data.rag_enabled),
-          topReviews: data.top_reviews || [],
+          topReviews: data.top_reviews,
+          provider: data.provider,
         },
       };
       setMessages((prev) => [...prev, aiResponse]);
-    } catch (e) {
+    } catch (error) {
+      clearTimeout(timeoutId);
+      const errorMessage =
+        error.name === 'AbortError'
+          ? '요청 시간이 초과되었습니다. 다시 시도해주세요.'
+          : '서버와 통신 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
       const aiResponse = {
         id: Date.now(),
         type: 'assistant',
-        content: '서버와 통신 중 오류가 발생했어요. 잠시 후 다시 시도해주세요.',
+        content: errorMessage,
         timestamp: new Date(),
-        metadata: { error: e.message },
+        metadata: { error: error.message },
       };
       setMessages((prev) => [...prev, aiResponse]);
     } finally {
-      clearTimeout(timeoutId);
-      abortControllerRef.current = null;
       setIsSending(false);
+      abortControllerRef.current = null;
     }
   };
 
@@ -136,9 +133,9 @@ const ChatPage = () => {
   };
 
   return (
-    <div className="min-h-screen" style={{background: 'linear-gradient(135deg, #D4F0F0 0%, #CCE2CB 100%)'}}>
+    <div className="min-h-screen bg-slate-50">
       {/* Header */}
-      <div className="bg-white border-b" style={{borderColor: '#B6CFB6'}}>
+      <div className="bg-white border-b border-slate-200">
         <div className="max-w-6xl mx-auto px-6 py-5">
           <div>
             <h1 className="text-2xl font-bold text-slate-900 mb-1">AI 채팅</h1>
@@ -149,7 +146,7 @@ const ChatPage = () => {
 
       {/* Messages */}
       <div className="max-w-6xl mx-auto px-6 py-5">
-        <div className="bg-white rounded-lg border p-6 min-h-[500px] max-h-[600px] overflow-y-auto space-y-4" style={{borderColor: '#B6CFB6'}}>
+        <div className="bg-white rounded-lg border border-slate-200 p-6 min-h-[500px] max-h-[600px] overflow-y-auto space-y-4">
         {messages.map((message) => (
           <div
             key={message.id}
@@ -159,7 +156,7 @@ const ChatPage = () => {
           >
             <div
               className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
-              style={{backgroundColor: message.type === 'user' ? '#8FCACA' : '#B6CFB6'}}
+              style={{backgroundColor: message.type === 'user' ? '#8FCACA' : '#CBD5E1'}}
             >
               {message.type === 'user' ? (
                 <User className="w-4 h-4 text-white" />
@@ -170,10 +167,10 @@ const ChatPage = () => {
             <div
               className={`max-w-2xl p-4 rounded-lg ${
                 message.type === 'user'
-                  ? 'text-white rounded-tr-sm shadow-sm'
-                  : 'bg-white border rounded-tl-sm'
+                  ? 'text-white rounded-tr-sm'
+                  : 'bg-slate-50 border border-slate-200 rounded-tl-sm'
               }`}
-              style={message.type === 'user' ? {background: 'linear-gradient(to right, #8FCACA, #97C1A9)'} : {borderColor: '#CCE2CB'}}
+              style={message.type === 'user' ? {background: 'linear-gradient(to right, #8FCACA, #97C1A9)'} : {}}
             >
               <p
                 className={`text-sm leading-relaxed ${
@@ -196,17 +193,9 @@ const ChatPage = () => {
                   </ul>
                 </div>
               ) : null}
-              {message.metadata?.provider ? (
-                <p className="text-xs mt-2 text-slate-400">
-                  모델: {message.metadata.provider}
-                </p>
-              ) : null}
-              {message.metadata?.error ? (
-                <p className="text-xs mt-2 text-rose-500">오류: {message.metadata.error}</p>
-              ) : null}
               <p
                 className={`text-xs mt-2 ${
-                  message.type === 'user' ? 'text-white opacity-80' : 'text-slate-500'
+                  message.type === 'user' ? 'text-white opacity-70' : 'text-slate-500'
                 }`}
               >
                 {formatTimestamp(message.timestamp)}
@@ -217,23 +206,14 @@ const ChatPage = () => {
 
         {/* Recommended Prompts */}
         {messages.length === 1 && (
-          <div className="mt-6 p-5 rounded-lg border" style={{backgroundColor: '#D4F0F0', borderColor: '#8FCACA'}}>
-            <p className="text-sm font-semibold mb-4" style={{color: '#2C5F5F'}}>추천 프롬프트</p>
+          <div className="mt-6 p-5 rounded-lg bg-slate-50 border border-slate-200">
+            <p className="text-sm font-semibold mb-4 text-slate-700">추천 프롬프트</p>
             <div className="grid grid-cols-2 gap-3">
               {quickQuestions.map((question, index) => (
                 <button
                   key={index}
                   onClick={() => setInputMessage(question)}
-                  className="text-sm bg-white text-slate-700 px-4 py-2.5 rounded-lg border transition-all text-left hover:shadow-md"
-                  style={{borderColor: '#B6CFB6'}}
-                  onMouseEnter={(e) => {
-                    e.target.style.backgroundColor = '#CCE2CB';
-                    e.target.style.borderColor = '#8FCACA';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.backgroundColor = 'white';
-                    e.target.style.borderColor = '#B6CFB6';
-                  }}
+                  className="text-sm bg-white text-slate-700 px-4 py-2.5 rounded-lg border border-slate-200 transition-all text-left hover:shadow-md hover:border-slate-300"
                 >
                   {question}
                 </button>
@@ -246,21 +226,15 @@ const ChatPage = () => {
 
       {/* Input */}
       <div className="max-w-6xl mx-auto px-6 pb-5">
-        <div className="bg-white rounded-lg border p-4" style={{borderColor: '#B6CFB6'}}>
+        <div className="bg-white rounded-lg border border-slate-200 p-4">
           <div className="flex items-end gap-3">
             <div className="flex-1">
               <textarea
                 value={inputMessage}
                 onChange={(e) => setInputMessage(e.target.value)}
                 placeholder="강의에 대해 궁금한 점을 물어보세요"
-                className="w-full resize-none border rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 text-sm"
-                style={{borderColor: '#B6CFB6'}}
+                className="w-full resize-none border border-slate-300 rounded-lg px-4 py-2.5 focus:outline-none text-sm"
                 rows="2"
-                onFocus={(e) => {
-                  e.target.style.borderColor = '#8FCACA';
-                  e.target.style.ringColor = '#8FCACA';
-                }}
-                onBlur={(e) => e.target.style.borderColor = '#B6CFB6'}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
@@ -272,17 +246,13 @@ const ChatPage = () => {
             <button
               onClick={handleSendMessage}
               disabled={!inputMessage.trim() || isSending}
-              className="px-5 py-2.5 disabled:bg-slate-300 text-white rounded-lg font-medium transition-all flex items-center gap-2 text-sm shadow-sm"
+              className="px-5 py-2.5 disabled:bg-slate-300 text-white rounded-lg font-medium transition-all flex items-center gap-2 text-sm"
               style={{background: !inputMessage.trim() || isSending ? '#CBD5E1' : 'linear-gradient(to right, #8FCACA, #97C1A9)'}}
               onMouseEnter={(e) => {
-                if (!e.target.disabled) {
-                  e.target.style.background = 'linear-gradient(to right, #7AB8B8, #86B098)';
-                }
+                if (!e.target.disabled) e.target.style.opacity = '0.9';
               }}
               onMouseLeave={(e) => {
-                if (!e.target.disabled) {
-                  e.target.style.background = 'linear-gradient(to right, #8FCACA, #97C1A9)';
-                }
+                if (!e.target.disabled) e.target.style.opacity = '1';
               }}
             >
               {isSending ? (
@@ -300,4 +270,3 @@ const ChatPage = () => {
 };
 
 export default ChatPage;
-

@@ -5,15 +5,8 @@ const PROFILE_STORAGE_KEY = 'courseai:gpa:profile';
 const COURSES_STORAGE_KEY = 'courseai:gpa:courses';
 
 const gradeToPoint = {
-  'A+': 4.5,
-  'A0': 4.0,
-  'B+': 3.5,
-  'B0': 3.0,
-  'C+': 2.5,
-  'C0': 2.0,
-  'D+': 1.5,
-  'D0': 1.0,
-  F: 0.0,
+  'A+': 4.5, 'A0': 4.0, 'B+': 3.5, 'B0': 3.0,
+  'C+': 2.5, 'C0': 2.0, 'D+': 1.5, 'D0': 1.0, F: 0.0,
 };
 
 const gradeOptions = Object.keys(gradeToPoint);
@@ -25,9 +18,7 @@ const createDefaultProfile = () => ({
   requiredCredits: '140',
 });
 
-const createDefaultCourses = () => [
-  { name: '', credits: 3, grade: 'A+' },
-];
+const createDefaultCourses = () => [{ name: '', credits: 3, grade: 'A+' }];
 
 const toNumber = (value) => {
   const num = parseFloat(value);
@@ -42,7 +33,6 @@ const formatDecimal = (value, digits = 2) => {
 const loadProfile = () => {
   const defaultProfile = createDefaultProfile();
   if (typeof window === 'undefined') return defaultProfile;
-
   try {
     const stored = window.localStorage.getItem(PROFILE_STORAGE_KEY);
     if (!stored) return defaultProfile;
@@ -56,7 +46,6 @@ const loadProfile = () => {
 const loadCourses = () => {
   const defaultCourses = createDefaultCourses();
   if (typeof window === 'undefined') return defaultCourses;
-
   try {
     const stored = window.localStorage.getItem(COURSES_STORAGE_KEY);
     if (!stored) return defaultCourses;
@@ -142,10 +131,8 @@ const GPAPage = () => {
   const resetData = () => {
     const defaultProfile = createDefaultProfile();
     const defaultCourses = createDefaultCourses();
-
     setProfile(defaultProfile);
     setSelectedCourses(defaultCourses);
-
     if (typeof window !== 'undefined') {
       window.localStorage.removeItem(PROFILE_STORAGE_KEY);
       window.localStorage.removeItem(COURSES_STORAGE_KEY);
@@ -153,9 +140,9 @@ const GPAPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/20 to-slate-50">
+    <div className="min-h-screen bg-slate-50">
       {/* Header */}
-      <div className="bg-gradient-to-r from-white via-blue-50/10 to-white border-b border-slate-200">
+      <div className="bg-white border-b border-slate-200">
         <div className="max-w-6xl mx-auto px-6 py-5">
           <div className="flex items-center justify-between mb-5">
             <div>
@@ -173,7 +160,7 @@ const GPAPage = () => {
 
           {/* Stats */}
           <div className="grid grid-cols-4 gap-3">
-            <div className="bg-gradient-to-br from-slate-50 to-blue-50/30 px-4 py-3 rounded-lg border border-slate-200">
+            <div className="bg-slate-50 px-4 py-3 rounded-lg border border-slate-200">
               <div className="text-xs text-slate-600 mb-1">현재 평점</div>
               <input
                 type="number"
@@ -186,7 +173,7 @@ const GPAPage = () => {
               />
             </div>
 
-            <div className="bg-gradient-to-br from-slate-50 to-blue-50/30 px-4 py-3 rounded-lg border border-slate-200">
+            <div className="bg-slate-50 px-4 py-3 rounded-lg border border-slate-200">
               <div className="text-xs text-slate-600 mb-1">목표 평점</div>
               <input
                 type="number"
@@ -199,7 +186,7 @@ const GPAPage = () => {
               />
             </div>
 
-            <div className="bg-gradient-to-br from-slate-50 to-blue-50/30 px-4 py-3 rounded-lg border border-slate-200">
+            <div className="bg-slate-50 px-4 py-3 rounded-lg border border-slate-200">
               <div className="text-xs text-slate-600 mb-1">이수 학점</div>
               <input
                 type="number"
@@ -211,7 +198,7 @@ const GPAPage = () => {
               />
             </div>
 
-            <div className="bg-gradient-to-br from-slate-50 to-blue-50/30 px-4 py-3 rounded-lg border border-slate-200">
+            <div className="bg-slate-50 px-4 py-3 rounded-lg border border-slate-200">
               <div className="text-xs text-slate-600 mb-1">졸업 필요</div>
               <div className="text-lg font-bold text-slate-900">{requiredCreditsNum}학점</div>
               <div className="text-xs text-slate-500">남은 {remainingCredits}학점</div>
@@ -224,26 +211,26 @@ const GPAPage = () => {
       <div className="max-w-6xl mx-auto px-6 py-5">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* GPA Calculator */}
-          <div className="bg-gradient-to-br from-white to-slate-50/50 rounded-lg border border-slate-200 p-5">
+          <div className="bg-white rounded-lg border border-slate-200 p-5">
             <h3 className="text-base font-bold text-slate-900 mb-4">학점 계산기</h3>
 
             <div className="space-y-2 mb-4">
               {selectedCourses.map((course, index) => (
                 <div
                   key={index}
-                  className="flex gap-2 items-center p-2 rounded-lg border border-slate-200 bg-white hover:border-blue-300 transition-colors"
+                  className="flex gap-2 items-center p-2 rounded-lg border border-slate-200 bg-slate-50"
                 >
                   <input
                     type="text"
                     value={course.name}
                     onChange={(e) => updateCourse(index, 'name', e.target.value)}
-                    className="flex-1 px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="flex-1 px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none bg-white"
                     placeholder="강의명 입력"
                   />
                   <select
                     value={course.credits}
                     onChange={(e) => updateCourse(index, 'credits', e.target.value)}
-                    className="px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none"
                   >
                     <option value={1}>1학점</option>
                     <option value={2}>2학점</option>
@@ -253,17 +240,15 @@ const GPAPage = () => {
                   <select
                     value={course.grade}
                     onChange={(e) => updateCourse(index, 'grade', e.target.value)}
-                    className="px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none"
                   >
                     {gradeOptions.map((grade) => (
-                      <option key={grade} value={grade}>
-                        {grade}
-                      </option>
+                      <option key={grade} value={grade}>{grade}</option>
                     ))}
                   </select>
                   <button
                     onClick={() => removeCourse(index)}
-                    className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:text-slate-300 disabled:hover:bg-transparent"
+                    className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:text-slate-300"
                     disabled={selectedCourses.length <= 1}
                   >
                     <Minus className="w-4 h-4" />
@@ -274,16 +259,16 @@ const GPAPage = () => {
 
             <button
               onClick={addCourse}
-              className="w-full py-2.5 border-2 border-dashed border-slate-300 rounded-lg hover:bg-blue-50 hover:border-blue-300 text-slate-600 hover:text-blue-600 mb-4 text-sm font-medium transition-all"
+              className="w-full py-2.5 border-2 border-dashed border-slate-300 rounded-lg hover:bg-slate-50 text-slate-600 mb-4 text-sm font-medium transition-all"
             >
               <Plus className="w-4 h-4 inline mr-1" />
               강의 추가
             </button>
 
-            <div className="bg-gradient-to-br from-blue-50 to-slate-50 rounded-lg p-4 border border-blue-200">
+            <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-semibold text-slate-700">예상 평균 학점</span>
-                <span className="text-2xl font-bold text-blue-600">{plannedGpaDisplay}</span>
+                <span className="text-2xl font-bold text-slate-900">{plannedGpaDisplay}</span>
               </div>
               <div className="text-sm text-slate-600 space-y-1">
                 <div>총 {totalCourseCredits}학점</div>
@@ -295,7 +280,7 @@ const GPAPage = () => {
           </div>
 
           {/* Summary */}
-          <div className="bg-gradient-to-br from-white to-slate-50/50 rounded-lg border border-slate-200 p-5">
+          <div className="bg-white rounded-lg border border-slate-200 p-5">
             <h3 className="text-base font-bold text-slate-900 mb-4">학점 현황</h3>
 
             <div className="space-y-3">
@@ -304,9 +289,9 @@ const GPAPage = () => {
                 <div className="text-2xl font-bold text-slate-900">{formatDecimal(currentGpaNum)}</div>
               </div>
 
-              <div className="p-3 bg-gradient-to-br from-blue-50 to-slate-50 rounded-lg border border-blue-200">
+              <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
                 <div className="text-xs text-slate-600 mb-1">이번 학기 예상</div>
-                <div className="text-2xl font-bold text-blue-600">{plannedGpaDisplay}</div>
+                <div className="text-2xl font-bold text-slate-900">{plannedGpaDisplay}</div>
               </div>
 
               <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
@@ -318,14 +303,17 @@ const GPAPage = () => {
               <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
                 <div className="flex justify-between items-center mb-2">
                   <div className="text-xs text-slate-600">졸업 진행률</div>
-                  <div className="text-sm font-semibold text-blue-600">
+                  <div className="text-sm font-semibold text-slate-900">
                     {((totalCreditsNum / requiredCreditsNum) * 100).toFixed(1)}%
                   </div>
                 </div>
                 <div className="w-full bg-slate-200 rounded-full h-2 mb-2">
                   <div
-                    className="bg-gradient-to-r from-blue-600 to-blue-500 h-2 rounded-full transition-all"
-                    style={{ width: `${Math.min((totalCreditsNum / requiredCreditsNum) * 100, 100)}%` }}
+                    className="h-2 rounded-full transition-all"
+                    style={{
+                      width: `${Math.min((totalCreditsNum / requiredCreditsNum) * 100, 100)}%`,
+                      background: 'linear-gradient(to right, #8FCACA, #97C1A9)'
+                    }}
                   ></div>
                 </div>
                 <div className="text-xs text-slate-600">
