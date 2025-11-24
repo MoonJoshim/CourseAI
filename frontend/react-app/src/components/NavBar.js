@@ -30,7 +30,7 @@ const NavBar = ({ currentPage, setCurrentPage }) => {
   };
 
   return (
-    <div className="bg-white border-b border-slate-200 px-6 py-4">
+    <div className="bg-gradient-to-r from-white via-blue-50/10 to-white border-b border-slate-200 px-6 py-4">
       <div className="flex items-center justify-between max-w-7xl mx-auto">
         <div className="flex items-center gap-8">
           <button 

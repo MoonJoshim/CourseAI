@@ -97,7 +97,7 @@ const CoursesPage = () => {
   }, [currentCourses]);
 
   const CourseCard = ({ course }) => (
-    <div className="bg-white rounded-lg hover:shadow-md transition-all duration-200 p-4 border border-slate-200 hover:border-blue-400">
+    <div className="bg-gradient-to-br from-white to-slate-50/50 rounded-lg hover:shadow-md transition-all duration-200 p-4 border border-slate-200 hover:border-blue-400">
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1">
           <h3 className="text-base font-bold text-slate-900 mb-1">{course.course_name}</h3>
@@ -137,7 +137,7 @@ const CoursesPage = () => {
         )}
       </div>
 
-      <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+      <div className="flex items-center pt-3 border-t border-slate-100">
         <div className="flex gap-1.5">
           {course.lecture_method && (
             <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-xs">
@@ -150,17 +150,12 @@ const CoursesPage = () => {
             </span>
           )}
         </div>
-        <div className="flex items-center text-sm text-slate-700">
-          <Star className="w-4 h-4 mr-1 text-blue-600 fill-current" />
-          <span className="font-medium">{course.average_rating || 0.0}</span>
-          <span className="ml-1 text-xs text-slate-500">({course.total_reviews || 0})</span>
-        </div>
       </div>
     </div>
   );
 
   const CourseListItem = ({ course }) => (
-    <div className="bg-white rounded-lg hover:shadow-md transition-all duration-200 p-4 border border-slate-200 hover:border-blue-400">
+    <div className="bg-gradient-to-r from-white to-slate-50/50 rounded-lg hover:shadow-md transition-all duration-200 p-4 border border-slate-200 hover:border-blue-400">
       <div className="flex items-center justify-between">
         <div className="flex-1">
           <div className="flex items-center gap-4 mb-2">
@@ -192,31 +187,24 @@ const CoursesPage = () => {
             )}
           </div>
         </div>
-        <div className="flex items-center gap-4">
-          <div className="flex gap-1.5">
-            {course.lecture_method && (
-              <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-xs">
-                {course.lecture_method}
-              </span>
-            )}
-            {course.class_type && (
-              <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-xs">
-                {course.class_type}
-              </span>
-            )}
-          </div>
-          <div className="flex items-center">
-            <Star className="w-4 h-4 mr-1 text-blue-600 fill-current" />
-            <span className="font-medium text-slate-900">{course.average_rating || 0.0}</span>
-            <span className="ml-1 text-xs text-slate-500">({course.total_reviews || 0})</span>
-          </div>
+        <div className="flex gap-1.5">
+          {course.lecture_method && (
+            <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-xs">
+              {course.lecture_method}
+            </span>
+          )}
+          {course.class_type && (
+            <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-xs">
+              {course.class_type}
+            </span>
+          )}
         </div>
       </div>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/20 to-slate-50">
       {/* Header */}
       <div className="bg-white border-b border-slate-200">
         <div className="max-w-6xl mx-auto px-6 py-5">
@@ -231,31 +219,31 @@ const CoursesPage = () => {
               onClick={() => setActiveTab('required')}
               className={`px-5 py-2 rounded-lg font-medium transition-all text-sm ${
                 activeTab === 'required'
-                  ? 'bg-blue-600 text-white'
+                  ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-sm'
                   : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'
               }`}
             >
-              전공필수 ({categorizedCourses.required.length})
+              전공필수
             </button>
             <button
               onClick={() => setActiveTab('elective')}
               className={`px-5 py-2 rounded-lg font-medium transition-all text-sm ${
                 activeTab === 'elective'
-                  ? 'bg-blue-600 text-white'
+                  ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-sm'
                   : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'
               }`}
             >
-              전공선택 ({categorizedCourses.elective.length})
+              전공선택
             </button>
             <button
               onClick={() => setActiveTab('general')}
               className={`px-5 py-2 rounded-lg font-medium transition-all text-sm ${
                 activeTab === 'general'
-                  ? 'bg-blue-600 text-white'
+                  ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-sm'
                   : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'
               }`}
             >
-              교양선택 (0)
+              교양선택
             </button>
           </div>
 

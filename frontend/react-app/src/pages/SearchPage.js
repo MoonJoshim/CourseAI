@@ -72,7 +72,7 @@ const SearchPage = ({
   }), [mockCourses]);
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/20 to-slate-50">
       {/* Header */}
       <div className="bg-white border-b border-slate-200">
         <div className="max-w-6xl mx-auto px-6 py-5">
@@ -83,15 +83,15 @@ const SearchPage = ({
 
           {/* Stats */}
           <div className="flex gap-3 mb-4">
-            <div className="flex-1 bg-slate-50 px-3 py-2.5 rounded-lg border border-slate-200">
+            <div className="flex-1 bg-gradient-to-br from-slate-50 to-blue-50/30 px-3 py-2.5 rounded-lg border border-slate-200">
               <div className="text-xs text-slate-600">전체 강의</div>
               <div className="text-lg font-bold text-slate-900">{stats.totalCourses}</div>
             </div>
-            <div className="flex-1 bg-slate-50 px-3 py-2.5 rounded-lg border border-slate-200">
+            <div className="flex-1 bg-gradient-to-br from-slate-50 to-blue-50/30 px-3 py-2.5 rounded-lg border border-slate-200">
               <div className="text-xs text-slate-600">총 강의평</div>
               <div className="text-lg font-bold text-slate-900">{stats.totalReviews}</div>
             </div>
-            <div className="flex-1 bg-slate-50 px-3 py-2.5 rounded-lg border border-slate-200">
+            <div className="flex-1 bg-gradient-to-br from-slate-50 to-blue-50/30 px-3 py-2.5 rounded-lg border border-slate-200">
               <div className="text-xs text-slate-600">평균 평점</div>
               <div className="text-lg font-bold text-slate-900">{stats.avgRating}</div>
             </div>
@@ -179,7 +179,7 @@ const SearchPage = ({
             {filteredCourses.map((course) => (
               <div 
                 key={course.id} 
-                className="bg-white rounded-lg border border-slate-200 hover:border-blue-400 hover:shadow-sm transition-all duration-200"
+                className="bg-gradient-to-br from-white to-slate-50/50 rounded-lg border border-slate-200 hover:border-blue-400 hover:shadow-md transition-all duration-200"
               >
                 {/* Header */}
                 <div className="p-4 border-b border-slate-100">
@@ -218,7 +218,7 @@ const SearchPage = ({
 
                   {/* Summary */}
                   {course.aiSummary && (
-                    <div className="bg-slate-50 rounded-lg p-3 mb-3 border border-slate-200">
+                    <div className="bg-gradient-to-br from-slate-50 to-blue-50/40 rounded-lg p-3 mb-3 border border-slate-200">
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-xs font-semibold text-slate-700">수강생 평가</span>
                         {course.sentiment > 0 && (
@@ -257,7 +257,7 @@ const SearchPage = ({
                       setSelectedCourse(course);
                       setCurrentPage('detail');
                     }}
-                    className="w-full py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm"
+                    className="w-full py-2 bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-lg hover:from-blue-700 hover:to-blue-600 transition-all font-medium text-sm shadow-sm"
                   >
                     상세보기
                   </button>
