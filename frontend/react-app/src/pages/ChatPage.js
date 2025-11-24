@@ -167,14 +167,18 @@ const ChatPage = () => {
             <div
               className={`max-w-2xl p-4 rounded-lg ${
                 message.type === 'user'
-                  ? 'text-white rounded-tr-sm'
+                  ? 'bg-white border rounded-tr-sm shadow-sm'
                   : 'bg-slate-50 border border-slate-200 rounded-tl-sm'
               }`}
-              style={message.type === 'user' ? {backgroundColor: '#8FCACA'} : {}}
+              style={
+                message.type === 'user'
+                  ? { borderColor: '#8FCACA', backgroundColor: '#FFFFFF' }
+                  : {}
+              }
             >
               <p
                 className={`text-sm leading-relaxed ${
-                  message.type === 'user' ? 'text-white' : 'text-slate-800'
+                  message.type === 'user' ? 'text-slate-900' : 'text-slate-800'
                 } whitespace-pre-line`}
               >
                 {message.content}
@@ -194,9 +198,7 @@ const ChatPage = () => {
                 </div>
               ) : null}
               <p
-                className={`text-xs mt-2 ${
-                  message.type === 'user' ? 'text-white opacity-70' : 'text-slate-500'
-                }`}
+                className="text-xs mt-2 text-slate-500"
               >
                 {formatTimestamp(message.timestamp)}
               </p>

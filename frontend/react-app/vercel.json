@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/api/rag/:path*",
-      "destination": "http://34.58.143.2:5003/api/rag/:path*"
+      "destination": "http://34.56.30.245:5003/api/rag/:path*"
     }
   ]
 }

@@ -27,6 +27,22 @@ CORS(app)
 
 # LLM Provider 설정
 LLM_PROVIDER = os.getenv('LLM_PROVIDER', 'gemini').lower()  # 기본값: gemini
+DEFAULT_RAG_TOP_K = int(os.getenv('AI_RAG_TOP_K', 5))
+_primary_gemini = (os.getenv('GEMINI_MODEL') or os.getenv('GOOGLE_GEMINI_MODEL') or 'gemini-2.5-flash').strip()
+_gemini_candidates = [
+    _primary_gemini,
+    'gemini-2.5-pro',
+    'gemini-2.0-flash',
+    'gemini-flash-latest',
+    'gemini-pro-latest',
+    'gemini-1.5-flash',
+]
+GEMINI_MODEL_CANDIDATES = []
+for candidate in _gemini_candidates:
+    if candidate and candidate not in GEMINI_MODEL_CANDIDATES:
+        GEMINI_MODEL_CANDIDATES.append(candidate)
+if not GEMINI_MODEL_CANDIDATES:
+    GEMINI_MODEL_CANDIDATES = ['gemini-pro']
 
 # LLM 설정
 if LLM_PROVIDER == 'openai':
@@ -312,7 +328,6 @@ def chat_with_openai(user_message, conversation_history):
 
 def chat_with_gemini(user_message, conversation_history):
     """Gemini(google-genai 새 SDK)로 채팅"""
-    # 시스템 프롬프트와 히스토리를 포함한 contents 구성
     prompt_lines = [SYSTEM_PROMPT.strip(), "", "이전 대화:"]
     for hist in conversation_history[-5:]:
         prompt_lines.append(f"사용자: {hist.get('user', '')}")
@@ -322,44 +337,54 @@ def chat_with_gemini(user_message, conversation_history):
     prompt_lines.append(f"사용자: {user_message}")
     contents = "\n".join(prompt_lines)
 
-    # 단일 호출로 응답 생성 (기본: 최신 모델명 사용)
-    response = gemini_client.models.generate_content(
-        model="gemini-2.5-flash",
-        contents=contents,
-    )
-
-    ai_response = getattr(response, 'text', None) or str(response)
+    ai_response, model_name = generate_gemini_response(contents)
     function_called = None
     return ai_response, function_called
 
-@app.route('/api/chat', methods=['POST'])
-def chat():
-    """AI 챗봇 대화 API"""
+
+def generate_gemini_response(prompt: str):
+    """여러 Gemini 모델을 순차적으로 시도해 응답을 생성"""
+    last_error = None
+    for model_name in GEMINI_MODEL_CANDIDATES:
+        try:
+            model = genai.GenerativeModel(model_name)
+            result = model.generate_content(prompt)
+            response_text = getattr(result, 'text', None) or str(result)
+            return response_text, model_name
+        except Exception as exc:
+            last_error = exc
+            print(f"⚠️ Gemini 모델 시도 실패 ({model_name}): {exc}")
+            continue
+    raise RuntimeError(last_error or "사용 가능한 Gemini 모델이 없습니다.")
+
+def process_chat_request(rag_mode: bool = False):
+    """공통 챗봇 처리 로직 (일반/ RAG 겸용)"""
     try:
-        data = request.json
+        data = request.get_json(silent=True) or {}
         user_message = data.get('message', '').strip()
         conversation_history = data.get('history', [])
-        
+        requested_top_k = int(data.get('top_k') or DEFAULT_RAG_TOP_K)
+
         if not user_message:
             return jsonify({'error': '메시지를 입력해주세요'}), 400
-        
+
         print(f"💬 사용자 메시지: {user_message}")
         print(f"🤖 LLM Provider: {LLM_PROVIDER}")
-        
+        if rag_mode:
+            print(f"📚 RAG 모드 활성 (top_k={requested_top_k})")
+
         # 대화 히스토리 구성
         messages = [{"role": "system", "content": SYSTEM_PROMPT}]
-        
+
         # 이전 대화 히스토리 추가 (최근 5개만)
         for hist in conversation_history[-5:]:
             messages.append({"role": "user", "content": hist.get("user", "")})
             messages.append({"role": "assistant", "content": hist.get("assistant", "")})
-        
+
         # 현재 사용자 메시지 추가
         messages.append({"role": "user", "content": user_message})
-        
-        # Gemini API 호출 (단순 대화)
-        model = genai.GenerativeModel("gemini-1.5-flash")
-        # 히스토리를 하나의 프롬프트로 연결
+
+        # Gemini API 호출
         history_text = "\n".join([
             f"사용자: {h.get('user','')}\n어시스턴트: {h.get('assistant','')}" for h in conversation_history[-5:]
         ])
@@ -373,22 +398,35 @@ def chat():
 {user_message}
 """.strip()
 
-        gen = model.generate_content(prompt)
-        ai_response = gen.text if hasattr(gen, 'text') else str(gen)
-        
+        ai_response, model_name = generate_gemini_response(prompt)
+
         print(f"🤖 AI 응답: {ai_response[:100]}...")
-        
+
         return jsonify({
             'response': ai_response,
             'timestamp': datetime.now().isoformat(),
-            'model': 'gemini-1.5-flash'
+            'model': model_name,
+            'mode': 'rag' if rag_mode else 'standard',
+            'top_k': requested_top_k
         })
-        
+
     except Exception as e:
         print(f"❌ 챗봇 오류: {str(e)}")
         import traceback
         traceback.print_exc()
         return jsonify({'error': f'챗봇 처리 중 오류 발생: {str(e)}'}), 500
+
+
+@app.route('/api/chat', methods=['POST'])
+def chat():
+    """AI 챗봇 대화 API (일반 모드)"""
+    return process_chat_request(rag_mode=False)
+
+
+@app.route('/api/rag/chat', methods=['POST'])
+def rag_chat():
+    """AI 챗봇 대화 API (RAG 모드)"""
+    return process_chat_request(rag_mode=True)
 
 @app.route('/api/chat/test', methods=['GET'])
 def test_chat():
