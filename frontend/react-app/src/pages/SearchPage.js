@@ -14,8 +14,15 @@ const SearchPage = ({
   setSelectedCourse,
   setCurrentPage
 }) => {
-  const [selectedDepartment, setSelectedDepartment] = useState('전체');
+  const [selectedDepartment, setSelectedDepartment] = useState('소프트웨어학과');
   const [minRating, setMinRating] = useState(0);
+  
+  // sortBy 초기값을 popularity로 설정
+  React.useEffect(() => {
+    if (sortBy !== 'popularity') {
+      setSortBy('popularity');
+    }
+  }, []);
 
   // 필터링 및 정렬된 강의 목록
   const filteredCourses = useMemo(() => {
@@ -65,7 +72,7 @@ const SearchPage = ({
       <div className="bg-white border-b border-slate-200">
         <div className="max-w-6xl mx-auto px-6 py-5">
           <div className="mb-5">
-            <h1 className="text-2xl font-bold text-slate-900 mb-1">과목별 강의평 조회</h1>
+            <h1 className="text-2xl font-bold text-slate-900 mb-1">전공과목 강의평 조회</h1>
             <p className="text-sm text-slate-600">실제 수강생들의 강의평을 바탕으로 한 평가를 확인하세요</p>
           </div>
 
@@ -123,7 +130,7 @@ const SearchPage = ({
               <option value="alphabetical">가나다순</option>
             </select>
 
-            <div className="ml-auto flex gap-3 items-center pr-4">
+            <div className="ml-auto flex gap-3 items-center pr-8">
               {['노팀플', '과제많음', '성적잘줌', '쉬움'].map(tag => (
                 <button
                   key={tag}
