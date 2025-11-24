@@ -34,11 +34,11 @@ if LLM_PROVIDER == 'openai':
     openai.api_key = os.getenv('OPENAI_API_KEY')
     openai_client = openai.OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 elif LLM_PROVIDER == 'gemini':
-    from google import genai
+    # genai는 이미 14번 줄에서 import 되었음
     GEMINI_API_KEY = os.getenv('GEMINI_API_KEY') or os.getenv('GOOGLE_API_KEY') or os.getenv('GOOGLE_GEMINI_API_KEY')
     if not GEMINI_API_KEY:
         raise ValueError("GEMINI_API_KEY 환경변수가 설정되지 않았습니다.")
-    gemini_client = genai.Client(api_key=GEMINI_API_KEY)
+    genai.configure(api_key=GEMINI_API_KEY)
 else:
     raise ValueError(f"지원하지 않는 LLM Provider: {LLM_PROVIDER}. 'openai' 또는 'gemini'를 사용하세요.")
 
