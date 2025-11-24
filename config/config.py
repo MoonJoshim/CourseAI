@@ -52,6 +52,9 @@ class Config:
     MONGO_DB_NAME = os.getenv('MONGO_DB_NAME', 'crawller')
     MONGO_URI = os.getenv('MONGO_URI', f"mongodb://{MONGO_INITDB_ROOT_USERNAME}:{MONGO_INITDB_ROOT_PASSWORD}@localhost:27017/{MONGO_DB_NAME}?authSource=admin")
 
+    # Google OAuth 설정
+    GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
+
     @classmethod
     def validate(cls):
         """설정 유효성 검사"""

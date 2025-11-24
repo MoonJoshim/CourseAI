@@ -3,8 +3,8 @@
 """
 
 from datetime import datetime
-from typing import List, Optional, Dict, Any
-from pydantic import BaseModel, Field
+from typing import List, Optional, Dict, Any, Union
+from pydantic import BaseModel, Field, ConfigDict
 from bson import ObjectId
 
 
@@ -16,17 +16,18 @@ class UserPreferences(BaseModel):
     preferred_professors: List[str] = Field(default_factory=list, description="선호 교수")
     time_preferences: List[str] = Field(default_factory=list, description="시간대 선호도")
     
-    class Config:
-        json_encoders = {
+    model_config = ConfigDict(
+        populate_by_name=True,
+        json_encoders={
             datetime: lambda v: v.isoformat(),
             ObjectId: str
         }
-        validate_by_name = True
+    )
 
 
 class UserProfile(BaseModel):
     """사용자 프로필 모델"""
-    _id: Optional[ObjectId] = Field(None, alias="_id")
+    id: Optional[Union[str, ObjectId]] = Field(None, alias="_id")
     user_id: str = Field(..., description="사용자 고유 ID")
     
     # 기본 정보
@@ -58,18 +59,19 @@ class UserProfile(BaseModel):
     last_login: Optional[datetime] = Field(None, description="마지막 로그인")
     is_active: bool = Field(default=True, description="계정 활성 상태")
     
-    class Config:
-        json_encoders = {
+    model_config = ConfigDict(
+        populate_by_name=True,
+        arbitrary_types_allowed=True,
+        json_encoders={
             datetime: lambda v: v.isoformat(),
             ObjectId: str
         }
-        validate_by_name = True
-        allow_population_by_field_name = True
+    )
 
 
 class UserActivity(BaseModel):
     """사용자 활동 로그 모델"""
-    _id: Optional[ObjectId] = Field(None, alias="_id")
+    id: Optional[Union[str, ObjectId]] = Field(None, alias="_id")
     user_id: str = Field(..., description="사용자 ID")
     activity_type: str = Field(..., description="활동 유형 (search/chat/bookmark/view)")
     
@@ -82,10 +84,11 @@ class UserActivity(BaseModel):
     timestamp: datetime = Field(default_factory=datetime.now, description="활동 시간")
     session_id: Optional[str] = Field(None, description="세션 ID")
     
-    class Config:
-        json_encoders = {
+    model_config = ConfigDict(
+        populate_by_name=True,
+        arbitrary_types_allowed=True,
+        json_encoders={
             datetime: lambda v: v.isoformat(),
             ObjectId: str
         }
-        validate_by_name = True
-        allow_population_by_field_name = True
+    )

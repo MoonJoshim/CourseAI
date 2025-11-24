@@ -12,7 +12,12 @@ from dotenv import load_dotenv
 import sys
 import os
 from pathlib import Path
+from datetime import datetime
+from typing import Dict, Any, Optional
 import pandas as pd
+from config.config import Config
+from google.oauth2 import id_token
+from google.auth.transport import requests as google_auth_requests
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 
 from selenium import webdriver
@@ -43,6 +48,247 @@ cached_search_results = {}  # 검색 결과 캐시
 SOFTWARE_COURSES_CACHE = None
 SOFTWARE_COURSES_CACHE_TS = 0
 SOFTWARE_COURSES_SOURCE = Path(__file__).resolve().parents[2] / 'course' / '2025-2.xlsx'
+
+GOOGLE_AUTH_REQUEST = google_auth_requests.Request()
+
+
+def verify_google_credential(credential: Optional[str]) -> Dict[str, Any]:
+    """Google ID 토큰 검증"""
+    if not credential:
+        raise ValueError("Google credential is missing.")
+    
+    if not Config.GOOGLE_CLIENT_ID:
+        raise ValueError("GOOGLE_CLIENT_ID 환경 변수가 설정되지 않았습니다.")
+    
+    try:
+        id_info = id_token.verify_oauth2_token(
+            credential,
+            GOOGLE_AUTH_REQUEST,
+            Config.GOOGLE_CLIENT_ID
+        )
+        if id_info.get('aud') != Config.GOOGLE_CLIENT_ID:
+            raise ValueError("토큰의 클라이언트 ID가 일치하지 않습니다.")
+        return id_info
+    except ValueError as exc:
+        raise ValueError(f"유효하지 않은 Google 토큰입니다: {exc}") from exc
+
+
+def get_users_collection():
+    """사용자 컬렉션 가져오기"""
+    db = get_mongo_db()
+    return db['users']
+
+
+def serialize_user(user_doc: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    """MongoDB 사용자 문서 직렬화"""
+    if not user_doc:
+        return None
+    
+    def _fmt_dt(value):
+        if isinstance(value, datetime):
+            return value.isoformat()
+        return None
+    
+    return {
+        "user_id": user_doc.get("user_id"),
+        "email": user_doc.get("email"),
+        "email_verified": user_doc.get("email_verified"),
+        "name": user_doc.get("name"),
+        "given_name": user_doc.get("given_name"),
+        "family_name": user_doc.get("family_name"),
+        "picture": user_doc.get("picture"),
+        "locale": user_doc.get("locale"),
+        "major": user_doc.get("major"),
+        "semester": user_doc.get("semester"),
+        "phone": user_doc.get("phone"),
+        "goal": user_doc.get("goal"),
+        "bio": user_doc.get("bio"),
+        "interests": user_doc.get("interests", []),
+        "preferences": user_doc.get("preferences", {}),
+        "provider": user_doc.get("provider", "google"),
+        "last_login": _fmt_dt(user_doc.get("last_login")),
+        "created_at": _fmt_dt(user_doc.get("created_at")),
+        "updated_at": _fmt_dt(user_doc.get("updated_at")),
+    }
+
+
+def upsert_google_user(id_info: Dict[str, Any]) -> Dict[str, Any]:
+    """Google 로그인 사용자를 upsert"""
+    users_collection = get_users_collection()
+    user_id = id_info.get("sub")
+    now = datetime.utcnow()
+    
+    if not user_id:
+        raise ValueError("Google 사용자 ID를 확인할 수 없습니다.")
+    
+    base_updates = {
+        "user_id": user_id,
+        "email": id_info.get("email"),
+        "email_verified": id_info.get("email_verified"),
+        "name": id_info.get("name"),
+        "given_name": id_info.get("given_name"),
+        "family_name": id_info.get("family_name"),
+        "picture": id_info.get("picture"),
+        "locale": id_info.get("locale"),
+        "provider": "google",
+        "updated_at": now,
+        "last_login": now,
+    }
+    
+    existing = users_collection.find_one({"user_id": user_id})
+    if existing:
+        users_collection.update_one(
+            {"_id": existing["_id"]},
+            {"$set": base_updates}
+        )
+        updated = users_collection.find_one({"_id": existing["_id"]})
+    else:
+        new_doc = {
+            **base_updates,
+            "created_at": now,
+            "major": None,
+            "semester": None,
+            "phone": "",
+            "goal": "",
+            "bio": "",
+            "interests": [],
+            "preferences": {},
+        }
+        users_collection.insert_one(new_doc)
+        updated = new_doc
+    
+    return updated
+
+
+def get_bearer_token() -> Optional[str]:
+    """Authorization 헤더에서 Bearer 토큰 추출"""
+    auth_header = request.headers.get("Authorization", "")
+    if not auth_header:
+        return None
+    if auth_header.lower().startswith("bearer "):
+        return auth_header[7:].strip()
+    return None
+
+
+@app.route("/api/auth/google", methods=["POST"])
+def authenticate_with_google():
+    """Google OAuth ID 토큰을 검증해 사용자 정보 반환"""
+    payload = request.get_json(silent=True) or {}
+    credential = payload.get("credential") or payload.get("id_token")
+    
+    if not credential:
+        return jsonify({"error": "credential 필드가 필요합니다."}), 400
+    
+    try:
+        id_info = verify_google_credential(credential)
+        user_doc = upsert_google_user(id_info)
+        return jsonify({
+            "token": credential,
+            "user": serialize_user(user_doc)
+        })
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 401
+    except Exception as exc:  # pylint: disable=broad-except
+        return jsonify({"error": "Google 인증 처리 중 오류가 발생했습니다.", "detail": str(exc)}), 500
+
+
+@app.route("/api/auth/me", methods=["GET"])
+def get_authenticated_user():
+    """현재 로그인한 사용자 정보 조회"""
+    token = get_bearer_token()
+    if not token:
+        return jsonify({"error": "Authorization 헤더가 필요합니다."}), 401
+    
+    try:
+        id_info = verify_google_credential(token)
+        user_id = id_info.get("sub")
+        if not user_id:
+            raise ValueError("Google 사용자 ID를 확인할 수 없습니다.")
+        
+        users_collection = get_users_collection()
+        user_doc = users_collection.find_one({"user_id": user_id})
+        if not user_doc:
+            user_doc = upsert_google_user(id_info)
+        else:
+            users_collection.update_one(
+                {"_id": user_doc["_id"]},
+                {"$set": {"last_login": datetime.utcnow(), "updated_at": datetime.utcnow()}}
+            )
+            user_doc = users_collection.find_one({"_id": user_doc["_id"]})
+        
+        return jsonify({"user": serialize_user(user_doc)})
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 401
+    except Exception as exc:  # pylint: disable=broad-except
+        return jsonify({"error": "사용자 정보를 가져오는 중 오류가 발생했습니다.", "detail": str(exc)}), 500
+
+
+@app.route("/api/users/me", methods=["PUT"])
+def update_authenticated_user():
+    """현재 사용자 프로필 업데이트"""
+    token = get_bearer_token()
+    if not token:
+        return jsonify({"error": "Authorization 헤더가 필요합니다."}), 401
+    
+    try:
+        id_info = verify_google_credential(token)
+        user_id = id_info.get("sub")
+        if not user_id:
+            raise ValueError("Google 사용자 ID를 확인할 수 없습니다.")
+        
+        payload = request.get_json(silent=True) or {}
+        users_collection = get_users_collection()
+        user_doc = users_collection.find_one({"user_id": user_id})
+        if not user_doc:
+            user_doc = upsert_google_user(id_info)
+        
+        updates: Dict[str, Any] = {}
+        if "name" in payload:
+            updates["name"] = payload["name"]
+        if "major" in payload:
+            updates["major"] = payload["major"]
+        if "goal" in payload:
+            updates["goal"] = payload["goal"]
+        if "bio" in payload:
+            updates["bio"] = payload["bio"]
+        if "phone" in payload:
+            updates["phone"] = payload["phone"]
+        if "semester" in payload:
+            semester_value = payload["semester"]
+            try:
+                updates["semester"] = int(semester_value) if semester_value not in (None, "") else None
+            except (TypeError, ValueError):
+                raise ValueError("semester 값은 정수이어야 합니다.")
+        if "interests" in payload:
+            interests_value = payload["interests"]
+            if isinstance(interests_value, str):
+                interests_value = [
+                    item.strip() for item in interests_value.split(",") if item.strip()
+                ]
+            if not isinstance(interests_value, list):
+                raise ValueError("interests 값은 리스트여야 합니다.")
+            updates["interests"] = interests_value
+        if "preferences" in payload:
+            preferences_value = payload["preferences"]
+            if not isinstance(preferences_value, dict):
+                raise ValueError("preferences 값은 객체여야 합니다.")
+            updates["preferences"] = preferences_value
+        
+        updates["updated_at"] = datetime.utcnow()
+        
+        users_collection.update_one({"user_id": user_id}, {"$set": updates})
+        refreshed = users_collection.find_one({"user_id": user_id})
+        return jsonify({"user": serialize_user(refreshed)})
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    except Exception as exc:  # pylint: disable=broad-except
+        return jsonify({"error": "사용자 정보를 업데이트하는 중 오류가 발생했습니다.", "detail": str(exc)}), 500
+
+
+@app.route("/api/auth/logout", methods=["POST"])
+def logout_user():
+    """클라이언트 측 로그아웃 처리를 위한 엔드포인트 (서버 상태 없음)"""
+    return jsonify({"success": True})
 
 
 def _clean_string(value):
@@ -1345,7 +1591,7 @@ if __name__ == '__main__':
     signal.signal(signal.SIGTERM, signal_handler)
 
     print("🚀 에브리타임 강의평 크롤링 API 서버 시작")
-    print("📍 http://localhost:5002")
+    print("📍 http://34.58.143.2:5002")
 
     try:
         app.run(debug=True, host='0.0.0.0', port=5002)

@@ -3,11 +3,11 @@ import NavBar from './components/NavBar';
 import SearchPage from './pages/SearchPage';
 import DetailPage from './pages/DetailPage';
 import ChatPage from './pages/ChatPage';
-import TrendsPage from './pages/TrendsPage';
-import RecommendPage from './pages/RecommendPage';
 import GPAPage from './pages/GPAPage';
-import ProfilePage from './pages/ProfilePage';
+import MyPage from './pages/MyPage';
 import CoursesPage from './pages/CoursesPage';
+import AuthForm from './components/AuthForm';
+import { useAuth } from './context/AuthContext';
 
 const AICoursePlatform = () => {
   const [currentPage, setCurrentPage] = useState('search');
@@ -15,6 +15,7 @@ const AICoursePlatform = () => {
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [viewMode, setViewMode] = useState('grid');
   const [sortBy, setSortBy] = useState('rating');
+  const { user, loading: authLoading, isAuthenticating, authError } = useAuth();
 
   // Mock data
   const mockCourses = [
@@ -32,14 +33,15 @@ const AICoursePlatform = () => {
       semester: '2024-2',
       timeSlot: '월(1,2) 수(3)',
       room: '공학관 301호',
-      aiSummary: '팀플 없고 과제 적당한 편. 출석은 중요하지만 성적은 잘 주는 편입니다.',
+      aiSummary:
+        '팀플 없고 과제 적당한 편. 출석은 중요하지만 성적은 잘 주는 편입니다.',
       sentiment: 85,
       difficulty: 3,
       workload: 2,
       gradeGenerosity: 4,
       bookmarked: false,
       trend: 'up',
-      keywords: ['객체지향', '설계패턴', '프로젝트관리', 'UML']
+      keywords: ['객체지향', '설계패턴', '프로젝트관리', 'UML'],
     },
     {
       id: 2,
@@ -62,7 +64,7 @@ const AICoursePlatform = () => {
       gradeGenerosity: 3,
       bookmarked: true,
       trend: 'down',
-      keywords: ['SQL', 'NoSQL', '정규화', '트랜잭션']
+      keywords: ['SQL', 'NoSQL', '정규화', '트랜잭션'],
     },
     {
       id: 3,
@@ -78,40 +80,23 @@ const AICoursePlatform = () => {
       semester: '2024-2',
       timeSlot: '월(3,4) 금(1,2)',
       room: '공학관 401호',
-      aiSummary: '재미있고 실용적인 수업. 포트폴리오 만들기에 도움되는 강의입니다.',
+      aiSummary:
+        '재미있고 실용적인 수업. 포트폴리오 만들기에 도움되는 강의입니다.',
       sentiment: 92,
       difficulty: 3,
       workload: 3,
       gradeGenerosity: 4,
       bookmarked: false,
       trend: 'up',
-      keywords: ['React', 'Node.js', 'API', '프론트엔드']
-    }
+      keywords: ['React', 'Node.js', 'API', '프론트엔드'],
+    },
   ];
 
-  const mockTrendData = [
-    { course: '웹프로그래밍', change: '+15%', trend: 'up' },
-    { course: '머신러닝', change: '+12%', trend: 'up' },
-    { course: '알고리즘', change: '-5%', trend: 'down' },
-    { course: '운영체제', change: '+8%', trend: 'up' }
-  ];
-
-  const mockUserProfile = {
-    name: '김학생',
-    major: '소프트웨어학과',
-    semester: 7,
-    gpa: 3.45,
-    totalCredits: 98,
-    requiredCredits: 130,
-    preferences: ['프론트엔드', '웹개발', '데이터분석']
-  };
-
-  // Render current page
   const renderCurrentPage = () => {
-    switch(currentPage) {
+    switch (currentPage) {
       case 'search':
         return (
-          <SearchPage 
+          <SearchPage
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
             viewMode={viewMode}
@@ -127,41 +112,20 @@ const AICoursePlatform = () => {
         return <ChatPage />;
       case 'detail':
         return (
-          <DetailPage 
+          <DetailPage
             selectedCourse={selectedCourse}
             mockCourses={mockCourses}
           />
         );
-      case 'trends':
-        return (
-          <TrendsPage 
-            mockTrendData={mockTrendData}
-          />
-        );
-      case 'recommend':
-        return (
-          <RecommendPage 
-            mockUserProfile={mockUserProfile}
-            mockCourses={mockCourses}
-          />
-        );
       case 'gpa':
-        return (
-          <GPAPage 
-            mockUserProfile={mockUserProfile}
-          />
-        );
-      case 'profile':
-        return (
-          <ProfilePage 
-            mockUserProfile={mockUserProfile}
-          />
-        );
+        return <GPAPage />;
+      case 'mypage':
+        return <MyPage />;
       case 'courses':
         return <CoursesPage />;
       default:
         return (
-          <SearchPage 
+          <SearchPage
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
             viewMode={viewMode}
@@ -176,18 +140,43 @@ const AICoursePlatform = () => {
     }
   };
 
+  if (authLoading || isAuthenticating) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 text-slate-600">
+        로그인 상태를 확인하고 있습니다...
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-sky-50 to-white flex flex-col items-center justify-center px-6">
+        <div className="max-w-md w-full bg-white border border-slate-200 rounded-2xl shadow-lg p-8 space-y-6">
+          <div className="text-center space-y-2">
+            <h1 className="text-2xl font-semibold text-slate-900">CourseAI</h1>
+            <p className="text-sm text-slate-600">
+              소프트웨어학과 강의 분석 서비스를 이용하려면 먼저 회원가입 또는 로그인을 해주세요.
+            </p>
+          </div>
+          <AuthForm />
+          {authError && (
+            <p className="text-xs text-rose-500 text-center">{authError}</p>
+          )}
+          <p className="text-xs text-slate-400 text-center">
+            이메일과 비밀번호만으로 간단하게 가입할 수 있습니다.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
-      <NavBar 
-        currentPage={currentPage}
-        setCurrentPage={setCurrentPage}
-        mockUserProfile={mockUserProfile}
-      />
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        {renderCurrentPage()}
-      </div>
+      <NavBar currentPage={currentPage} setCurrentPage={setCurrentPage} />
+      <div className="max-w-7xl mx-auto px-6 py-8">{renderCurrentPage()}</div>
     </div>
   );
 };
 
 export default AICoursePlatform;
+

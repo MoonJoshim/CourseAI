@@ -23,13 +23,32 @@ class VectorStore:
         self.index = self.pc.Index(self.index_name)
         
         # 임베딩 모델 초기화
-        model_name = os.environ.get("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
+        # 기본값: intfloat/multilingual-e5-base (768차원) - Pinecone 인덱스와 일치
+        model_name = os.environ.get("EMBEDDING_MODEL", "intfloat/multilingual-e5-base")
+        print(f"🧠 임베딩 모델 로딩 중... ({model_name})")
         self.embedder = SentenceTransformer(model_name)
         print(f"✅ VectorStore 초기화 완료 - 인덱스: {self.index_name}, 모델: {model_name}")
 
-    def embed_texts(self, texts: List[str]) -> List[List[float]]:
-        """텍스트 리스트를 벡터로 변환"""
-        embeddings = self.embedder.encode(texts, normalize_embeddings=True)
+    def embed_texts(self, texts: List[str], is_query: bool = False) -> List[List[float]]:
+        """텍스트 리스트를 벡터로 변환
+        
+        Args:
+            texts: 벡터화할 텍스트 리스트
+            is_query: True이면 쿼리용 (E5 모델의 경우 "query:" 프리픽스 추가)
+        """
+        # E5 모델인 경우 쿼리/패시지 프리픽스 추가
+        model_name = os.environ.get("EMBEDDING_MODEL", "intfloat/multilingual-e5-base")
+        if "e5" in model_name.lower() or "multilingual-e5" in model_name.lower():
+            if is_query:
+                # 쿼리용: "query:" 프리픽스 추가
+                prefixed_texts = [f"query: {text}" for text in texts]
+            else:
+                # 패시지용: "passage:" 프리픽스 추가 (저장 시와 동일하게)
+                prefixed_texts = [f"passage: {text}" for text in texts]
+        else:
+            prefixed_texts = texts
+        
+        embeddings = self.embedder.encode(prefixed_texts, normalize_embeddings=True)
         return embeddings.tolist()
 
     def sanitize_id(self, text: str) -> str:
@@ -68,19 +87,32 @@ class VectorStore:
             return False
 
     def query_similar_reviews(self, query_text: str, top_k: int = 10, 
-                            filter_dict: Optional[Dict[str, Any]] = None) -> List[Dict]:
+                            filter_dict: Optional[Dict[str, Any]] = None,
+                            namespace: Optional[str] = None) -> List[Dict]:
         """유사한 강의평 검색"""
         try:
-            # 쿼리 텍스트 임베딩
-            query_vector = self.embed_texts([query_text])[0]
+            # 쿼리 텍스트 임베딩 (is_query=True로 설정하여 "query:" 프리픽스 자동 추가)
+            query_vector = self.embed_texts([query_text], is_query=True)[0]
+            
+            # Pinecone 검색 옵션 구성
+            # namespace가 None이면 Pinecone이 자동으로 _default_ namespace를 사용
+            query_options = {
+                "vector": query_vector,
+                "top_k": top_k,
+                "include_metadata": True
+            }
+            
+            # Namespace가 명시적으로 지정된 경우에만 추가
+            # None이면 Pinecone이 자동으로 _default_ namespace를 검색함
+            if namespace:
+                query_options["namespace"] = namespace
+            
+            # 필터가 있는 경우 추가
+            if filter_dict:
+                query_options["filter"] = filter_dict
             
             # Pinecone 검색
-            results = self.index.query(
-                vector=query_vector,
-                top_k=top_k,
-                include_metadata=True,
-                filter=filter_dict or {}
-            )
+            results = self.index.query(**query_options)
             
             # 결과 포맷팅
             similar_reviews = []
@@ -91,10 +123,19 @@ class VectorStore:
                     "metadata": match.metadata
                 })
             
+            # namespace가 None이면 Pinecone이 자동으로 _default_를 사용
+            actual_namespace = namespace if namespace else "_default_"
+            print(f"🔍 검색 결과: {len(similar_reviews)}개 발견 (namespace: {actual_namespace})")
+            if similar_reviews:
+                print(f"   최고 점수: {similar_reviews[0]['score']:.4f}")
+                print(f"   첫 번째 결과 메타데이터 키: {list(similar_reviews[0]['metadata'].keys())}")
+            
             return similar_reviews
             
         except Exception as e:
             print(f"❌ 검색 실패: {e}")
+            import traceback
+            traceback.print_exc()
             return []
 
     def get_index_stats(self) -> Dict[str, Any]:
