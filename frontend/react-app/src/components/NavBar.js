@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { 
-  Search, Calculator, Brain, Bell, User, MessageSquare, List, LogOut
+  Search, Calculator, User, MessageSquare, List, LogOut
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -70,10 +70,6 @@ const NavBar = ({ currentPage, setCurrentPage }) => {
         </div>
 
         <div className="flex items-center gap-4">
-          <button className="p-2 text-slate-500 hover:text-slate-700 relative">
-            <Bell className="w-5 h-5" />
-            <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full"></span>
-          </button>
           {user ? (
             <div className="flex items-center gap-3">
               <button 

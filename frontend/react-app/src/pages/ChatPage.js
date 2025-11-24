@@ -134,30 +134,20 @@ const ChatPage = () => {
   };
 
   return (
-    <div className="h-[calc(100vh-200px)] flex flex-col">
-      {/* Chat Header */}
-      <div className="bg-white border-b border-slate-200 p-4 rounded-t-xl">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-sky-100 rounded-lg">
-            <MessageSquare className="w-6 h-6 text-sky-600" />
-          </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/20 to-slate-50">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-white via-blue-50/10 to-white border-b border-slate-200">
+        <div className="max-w-6xl mx-auto px-6 py-5">
           <div>
-            <h2 className="text-lg font-semibold text-slate-800">AI 강의 상담</h2>
-            <p className="text-sm text-slate-500">궁금한 강의 정보를 자연어로 물어보세요</p>
+            <h1 className="text-2xl font-bold text-slate-900 mb-1">AI 채팅</h1>
+            <p className="text-sm text-slate-600">강의에 대해 자연어로 질문하세요</p>
           </div>
-        </div>
-      </div>
-
-      {/* Mode Toggle */}
-      <div className="flex items-center justify-between px-4 py-2 bg-slate-50 border-b border-slate-200">
-        <div className="flex items-center gap-2 text-sm text-slate-600">
-          <Info className="w-4 h-4" />
-          <span>RAG 모드: 강의평 벡터 검색을 사용해 더 정확한 답변을 제공합니다.</span>
         </div>
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-50">
+      <div className="max-w-6xl mx-auto px-6 py-5">
+        <div className="bg-gradient-to-br from-white to-slate-50/50 rounded-lg border border-slate-200 p-6 min-h-[500px] max-h-[600px] overflow-y-auto space-y-4">
         {messages.map((message) => (
           <div
             key={message.id}
@@ -167,19 +157,19 @@ const ChatPage = () => {
           >
             <div
               className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                message.type === 'user' ? 'bg-sky-500' : 'bg-slate-600'
+                message.type === 'user' ? 'bg-blue-600' : 'bg-slate-600'
               }`}
             >
               {message.type === 'user' ? (
                 <User className="w-4 h-4 text-white" />
               ) : (
-                <Brain className="w-4 h-4 text-white" />
+                <MessageSquare className="w-4 h-4 text-white" />
               )}
             </div>
             <div
               className={`max-w-2xl p-4 rounded-lg ${
                 message.type === 'user'
-                  ? 'bg-sky-600 text-white rounded-tr-sm'
+                  ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-tr-sm shadow-sm'
                   : 'bg-white border border-slate-200 rounded-tl-sm'
               }`}
             >
@@ -214,7 +204,7 @@ const ChatPage = () => {
               ) : null}
               <p
                 className={`text-xs mt-2 ${
-                  message.type === 'user' ? 'text-sky-100' : 'text-slate-500'
+                  message.type === 'user' ? 'text-blue-100' : 'text-slate-500'
                 }`}
               >
                 {formatTimestamp(message.timestamp)}
@@ -222,56 +212,58 @@ const ChatPage = () => {
             </div>
           </div>
         ))}
+
+        {/* Quick Questions */}
+        {messages.length === 1 && (
+          <div className="mt-4 p-4 bg-gradient-to-br from-blue-50 to-slate-50 rounded-lg border border-blue-200">
+            <p className="text-sm text-slate-700 font-medium mb-3">빠른 질문</p>
+            <div className="flex flex-wrap gap-2">
+              {quickQuestions.map((question, index) => (
+                <button
+                  key={index}
+                  onClick={() => setInputMessage(question)}
+                  className="text-sm bg-white text-slate-700 px-3 py-1.5 rounded-full border border-slate-200 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-all"
+                >
+                  {question}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Quick Questions */}
-      {messages.length === 1 && (
-        <div className="p-4 bg-white border-t border-slate-200">
-          <p className="text-sm text-slate-600 mb-3">빠른 질문:</p>
-          <div className="flex flex-wrap gap-2">
-            {quickQuestions.map((question, index) => (
-              <button
-                key={index}
-                onClick={() => setInputMessage(question)}
-                className="text-sm bg-sky-50 text-sky-700 px-3 py-2 rounded-full border border-sky-200 hover:bg-sky-100 transition-colors"
-              >
-                {question}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Input */}
-      <div className="bg-white border-t border-slate-200 p-4 rounded-b-xl">
-        <div className="flex items-end gap-3">
-          <div className="flex-1">
-            <textarea
-              value={inputMessage}
-              onChange={(e) => setInputMessage(e.target.value)}
-              placeholder="강의에 대해 궁금한 점을 물어보세요..."
-              className="w-full resize-none border border-slate-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-transparent bg-slate-50 focus:bg-white transition-colors"
-              rows="1"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSendMessage();
-                }
-              }}
-            />
+      <div className="max-w-6xl mx-auto px-6 pb-5">
+        <div className="bg-white rounded-lg border border-slate-200 p-4">
+          <div className="flex items-end gap-3">
+            <div className="flex-1">
+              <textarea
+                value={inputMessage}
+                onChange={(e) => setInputMessage(e.target.value)}
+                placeholder="강의에 대해 궁금한 점을 물어보세요"
+                className="w-full resize-none border border-slate-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                rows="2"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSendMessage();
+                  }
+                }}
+              />
+            </div>
+            <button
+              onClick={handleSendMessage}
+              disabled={!inputMessage.trim() || isSending}
+              className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 disabled:bg-slate-300 text-white rounded-lg font-medium transition-all flex items-center gap-2 text-sm shadow-sm"
+            >
+              {isSending ? (
+                <PauseCircle className="w-4 h-4" onClick={handleAbort} />
+              ) : (
+                <Send className="w-4 h-4" />
+              )}
+              {isSending ? '대기중' : '전송'}
+            </button>
           </div>
-          <button
-            onClick={handleSendMessage}
-            disabled={!inputMessage.trim() || isSending}
-            className="px-6 py-3 bg-sky-600 hover:bg-sky-700 disabled:bg-slate-300 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
-          >
-            {isSending ? (
-              <PauseCircle className="w-4 h-4" onClick={handleAbort} />
-            ) : (
-              <Send className="w-4 h-4" />
-            )}
-            {isSending ? '응답 대기 중...' : '전송'}
-          </button>
         </div>
       </div>
     </div>

@@ -189,8 +189,8 @@ const SearchPage = ({
                       <p className="text-sm text-slate-600">{course.professor}</p>
                       <p className="text-xs text-slate-500 mt-1">{course.department} • {course.credits}학점</p>
                     </div>
-                    <div className="flex items-center gap-1 bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-200">
-                      <Star className="w-4 h-4 text-blue-600 fill-current" />
+                    <div className="flex items-center gap-1 bg-amber-50 px-2.5 py-1.5 rounded-lg border border-amber-200">
+                      <Star className="w-4 h-4 text-amber-500 fill-current" />
                       <span className="text-base font-bold text-slate-900">{course.rating}</span>
                     </div>
                   </div>
