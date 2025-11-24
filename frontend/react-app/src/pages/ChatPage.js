@@ -26,7 +26,7 @@ const ChatPage = () => {
       id: 1,
       type: 'assistant',
       content:
-        '안녕하세요! 강의 관련 질문이 있으시면 언제든 물어보세요. 예를 들어 "노팀플 강의 추천해줘" 같은 질문을 해보시면 됩니다.',
+        '안녕하세요! 저는 RAG(Retrieval-Augmented Generation) 기반의 강의평 AI 어시스턴트입니다.\n\n실제 수강생들의 강의평 데이터를 벡터 검색하여 가장 관련성 높은 정보를 기반으로 답변을 제공합니다.\n\n강의 추천, 교수님 정보, 수강 팁 등 궁금한 점을 자유롭게 질문해주세요.',
       timestamp: new Date(),
     },
   ]);
@@ -119,10 +119,12 @@ const ChatPage = () => {
   };
 
   const quickQuestions = [
-    '노팀플 강의 추천해줘',
-    '성적 잘 주는 교수님은?',
-    '웹개발 관련 강의 어때?',
-    '컴공 전필 중에 쉬운 거는?',
+    '데이터베이스 강의 중 평점 높은 교수님은?',
+    '노팀플이면서 과제 적당한 강의 추천해줘',
+    '웹 개발 배우기 좋은 강의는?',
+    '알고리즘 강의 교수님별 차이점 알려줘',
+    '객체지향프로그래밍 어느 교수님이 좋아?',
+    '성적 잘 주시는 교수님 추천',
   ];
 
   const handleAbort = () => {
@@ -134,9 +136,9 @@ const ChatPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/20 to-slate-50">
+    <div className="min-h-screen" style={{background: 'linear-gradient(135deg, #D4F0F0 0%, #CCE2CB 100%)'}}>
       {/* Header */}
-      <div className="bg-gradient-to-r from-white via-blue-50/10 to-white border-b border-slate-200">
+      <div className="bg-white border-b" style={{borderColor: '#B6CFB6'}}>
         <div className="max-w-6xl mx-auto px-6 py-5">
           <div>
             <h1 className="text-2xl font-bold text-slate-900 mb-1">AI 채팅</h1>
@@ -147,7 +149,7 @@ const ChatPage = () => {
 
       {/* Messages */}
       <div className="max-w-6xl mx-auto px-6 py-5">
-        <div className="bg-gradient-to-br from-white to-slate-50/50 rounded-lg border border-slate-200 p-6 min-h-[500px] max-h-[600px] overflow-y-auto space-y-4">
+        <div className="bg-white rounded-lg border p-6 min-h-[500px] max-h-[600px] overflow-y-auto space-y-4" style={{borderColor: '#B6CFB6'}}>
         {messages.map((message) => (
           <div
             key={message.id}
@@ -156,9 +158,8 @@ const ChatPage = () => {
             }`}
           >
             <div
-              className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                message.type === 'user' ? 'bg-blue-600' : 'bg-slate-600'
-              }`}
+              className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
+              style={{backgroundColor: message.type === 'user' ? '#8FCACA' : '#B6CFB6'}}
             >
               {message.type === 'user' ? (
                 <User className="w-4 h-4 text-white" />
@@ -169,9 +170,10 @@ const ChatPage = () => {
             <div
               className={`max-w-2xl p-4 rounded-lg ${
                 message.type === 'user'
-                  ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-tr-sm shadow-sm'
-                  : 'bg-white border border-slate-200 rounded-tl-sm'
+                  ? 'text-white rounded-tr-sm shadow-sm'
+                  : 'bg-white border rounded-tl-sm'
               }`}
+              style={message.type === 'user' ? {background: 'linear-gradient(to right, #8FCACA, #97C1A9)'} : {borderColor: '#CCE2CB'}}
             >
               <p
                 className={`text-sm leading-relaxed ${
@@ -204,7 +206,7 @@ const ChatPage = () => {
               ) : null}
               <p
                 className={`text-xs mt-2 ${
-                  message.type === 'user' ? 'text-blue-100' : 'text-slate-500'
+                  message.type === 'user' ? 'text-white opacity-80' : 'text-slate-500'
                 }`}
               >
                 {formatTimestamp(message.timestamp)}
@@ -213,16 +215,25 @@ const ChatPage = () => {
           </div>
         ))}
 
-        {/* Quick Questions */}
+        {/* Recommended Prompts */}
         {messages.length === 1 && (
-          <div className="mt-4 p-4 bg-gradient-to-br from-blue-50 to-slate-50 rounded-lg border border-blue-200">
-            <p className="text-sm text-slate-700 font-medium mb-3">빠른 질문</p>
-            <div className="flex flex-wrap gap-2">
+          <div className="mt-6 p-5 rounded-lg border" style={{backgroundColor: '#D4F0F0', borderColor: '#8FCACA'}}>
+            <p className="text-sm font-semibold mb-4" style={{color: '#2C5F5F'}}>추천 프롬프트</p>
+            <div className="grid grid-cols-2 gap-3">
               {quickQuestions.map((question, index) => (
                 <button
                   key={index}
                   onClick={() => setInputMessage(question)}
-                  className="text-sm bg-white text-slate-700 px-3 py-1.5 rounded-full border border-slate-200 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-all"
+                  className="text-sm bg-white text-slate-700 px-4 py-2.5 rounded-lg border transition-all text-left hover:shadow-md"
+                  style={{borderColor: '#B6CFB6'}}
+                  onMouseEnter={(e) => {
+                    e.target.style.backgroundColor = '#CCE2CB';
+                    e.target.style.borderColor = '#8FCACA';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.backgroundColor = 'white';
+                    e.target.style.borderColor = '#B6CFB6';
+                  }}
                 >
                   {question}
                 </button>
@@ -235,15 +246,21 @@ const ChatPage = () => {
 
       {/* Input */}
       <div className="max-w-6xl mx-auto px-6 pb-5">
-        <div className="bg-white rounded-lg border border-slate-200 p-4">
+        <div className="bg-white rounded-lg border p-4" style={{borderColor: '#B6CFB6'}}>
           <div className="flex items-end gap-3">
             <div className="flex-1">
               <textarea
                 value={inputMessage}
                 onChange={(e) => setInputMessage(e.target.value)}
                 placeholder="강의에 대해 궁금한 점을 물어보세요"
-                className="w-full resize-none border border-slate-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                className="w-full resize-none border rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 text-sm"
+                style={{borderColor: '#B6CFB6'}}
                 rows="2"
+                onFocus={(e) => {
+                  e.target.style.borderColor = '#8FCACA';
+                  e.target.style.ringColor = '#8FCACA';
+                }}
+                onBlur={(e) => e.target.style.borderColor = '#B6CFB6'}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
@@ -255,7 +272,18 @@ const ChatPage = () => {
             <button
               onClick={handleSendMessage}
               disabled={!inputMessage.trim() || isSending}
-              className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 disabled:bg-slate-300 text-white rounded-lg font-medium transition-all flex items-center gap-2 text-sm shadow-sm"
+              className="px-5 py-2.5 disabled:bg-slate-300 text-white rounded-lg font-medium transition-all flex items-center gap-2 text-sm shadow-sm"
+              style={{background: !inputMessage.trim() || isSending ? '#CBD5E1' : 'linear-gradient(to right, #8FCACA, #97C1A9)'}}
+              onMouseEnter={(e) => {
+                if (!e.target.disabled) {
+                  e.target.style.background = 'linear-gradient(to right, #7AB8B8, #86B098)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!e.target.disabled) {
+                  e.target.style.background = 'linear-gradient(to right, #8FCACA, #97C1A9)';
+                }
+              }}
             >
               {isSending ? (
                 <PauseCircle className="w-4 h-4" onClick={handleAbort} />
