@@ -9,7 +9,7 @@ from pinecone import Pinecone
 from collections import defaultdict
 from sentence_transformers import SentenceTransformer
 from langchain_pinecone import PineconeVectorStore
-from typing import List
+from typing import List, Dict, Any, Optional
 import google.generativeai as genai
 
 # LangChain Embeddings import (버전에 따라 경로가 다를 수 있음)
@@ -90,73 +90,106 @@ def call_gemini(prompt):
     return response.text
 
 # ───────────────────────────────────────────────
-# TEST 1: Pinecone index 목록 확인 API
+# Intent 클래스 (질문 의도 분석 결과)
 # ───────────────────────────────────────────────
-@app.route("/api/test/pinecone", methods=["GET"])
-def test_pinecone():
-    try:
-        indexes = pc.list_indexes()
-        return jsonify({"indexes": [idx.name for idx in indexes]})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+class QueryIntent:
+    """질문 의도 분석 결과"""
+    def __init__(self, needs_structured_filter: bool = False, filters: Optional[Dict[str, Any]] = None, semantic_query: str = ""):
+        self.needs_structured_filter = needs_structured_filter
+        self.filters = filters or {}
+        self.semantic_query = semantic_query
 
 # ───────────────────────────────────────────────
-# TEST 2: 벡터 저장 테스트
+# Helper 함수들 (Stub 구현)
 # ───────────────────────────────────────────────
-@app.route("/api/test/upsert", methods=["POST"])
-def upsert_test():
-    body = request.get_json()
-    text = body.get("text", "")
-    course_id = body.get("course_id", "TEST101")
+def classify_query_intent(user_query: str) -> QueryIntent:
+    """질문 의도 분석 (Structured / Semantic 분리)"""
+    # TODO: 구현 필요
+    return QueryIntent(
+        needs_structured_filter=False,
+        filters={},
+        semantic_query=user_query
+    )
 
+def filter_from_mongodb(filters: Dict[str, Any]) -> Optional[List[Dict[str, Any]]]:
+    """MongoDB에서 구조적 필터로 강의 검색"""
+    # TODO: 구현 필요
+    return None
+
+def semantic_search_pinecone(query: str, candidates: Optional[List[Dict[str, Any]]] = None) -> List[Dict[str, Any]]:
+    """Pinecone 의미 기반 검색"""
+    # TODO: 구현 필요
+    return []
+
+def merge_results(mongo_candidates: Optional[List[Dict[str, Any]]], pinecone_results: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """두 결과를 merge → 강의 정보 + 리뷰 정보 통합"""
+    # TODO: 구현 필요
+    return {
+        "courses": mongo_candidates or [],
+        "reviews": pinecone_results
+    }
+
+def synthesize_answer_with_llm(user_query: str, merged_context: Dict[str, Any]) -> str:
+    """LLM 최종 응답 생성 (Gemini)"""
+    # TODO: 구현 필요
+    return "답변 생성 중..."
+
+# ───────────────────────────────────────────────
+# RAG Chat API 엔드포인트
+# ───────────────────────────────────────────────
+@app.route("/api/rag/chat", methods=["POST"])
+def rag_chat():
+    """RAG 기반 챗봇 API"""
     try:
-        vectorstore.add_texts(
-            texts=[text],
-            metadatas=[{"course_id": course_id}],
-            ids=[f"{course_id}-001"]
+        body = request.get_json()
+        user_query = body.get("query", "").strip()
+        
+        if not user_query:
+            return jsonify({"error": "query 파라미터가 필요합니다."}), 400
+        
+        # Step 1: 질문 분석 (Structured / Semantic 분리)
+        intent = classify_query_intent(user_query)
+        
+        # Step 2: 구조적 필터 필요 여부 확인
+        if intent.needs_structured_filter:
+            mongo_candidates = filter_from_mongodb(intent.filters)
+        else:
+            mongo_candidates = None
+        
+        # Step 3: Pinecone 의미 기반 검색
+        pinecone_results = semantic_search_pinecone(
+            query=intent.semantic_query,
+            candidates=mongo_candidates
         )
-        return jsonify({"status": "ok", "message": "Upsert 성공"})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-# ───────────────────────────────────────────────
-# TEST 3: 벡터 검색 테스트
-# ───────────────────────────────────────────────
-@app.route("/api/test/search", methods=["POST"])
-def search_test():
-    body = request.get_json()
-    query = body.get("query", "")
-    k = body.get("k", 3)
-
-    try:
-        # similarity_search_with_score를 사용하여 유사도 점수도 함께 반환
-        docs_with_scores = vectorstore.similarity_search_with_score(query, k=k)
+        
+        # Step 4: 두 결과를 merge → 강의 정보 + 리뷰 정보 통합
+        merged_context = merge_results(
+            mongo_candidates,
+            pinecone_results
+        )
+        
+        # Step 5: LLM 최종 응답 생성 (Gemini)
+        final_answer = synthesize_answer_with_llm(
+            user_query,
+            merged_context
+        )
+        
+        # Step 6: 응답 반환
         return jsonify({
-            "query": query,
-            "results": [
-                {
-                    "text": doc.page_content,
-                    "metadata": doc.metadata,
-                    "score": float(score)  # 유사도 점수 추가
-                }
-                for doc, score in docs_with_scores
-            ]
+            "answer": final_answer,
+            "debug": {
+                "intent": {
+                    "needs_structured_filter": intent.needs_structured_filter,
+                    "filters": intent.filters,
+                    "semantic_query": intent.semantic_query
+                },
+                "mongo_candidates": len(mongo_candidates) if mongo_candidates else 0,
+                "pinecone_hits": len(pinecone_results)
+            }
         })
+        
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
-# ───────────────────────────────────────────────
-# TEST 4: Gemini 호출 테스트
-# ───────────────────────────────────────────────
-@app.route("/api/test/gemini")
-def test_gemini():
-    try:
-        result = call_gemini("Hello! 이 문장은 정상적으로 응답하면 Gemini 연결 성공입니다.")
-        return jsonify({"response": result})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-# ───────────────────────────────────────────────
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5005, debug=True)
