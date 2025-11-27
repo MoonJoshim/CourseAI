@@ -94,9 +94,13 @@ const DetailPage = ({ selectedCourse, mockCourses }) => {
 
         const fullUrl = `${apiUrl}?${params.toString()}`;
         console.log('🔍 Fetching reviews from:', fullUrl);
+        console.log('📋 Course info:', { name: course.name, professor: course.professor });
 
         const response = await fetch(fullUrl, {
           signal: controller.signal,
+          headers: {
+            'Accept': 'application/json',
+          },
         });
 
         if (!response.ok) {
@@ -297,7 +301,11 @@ const DetailPage = ({ selectedCourse, mockCourses }) => {
               </div>
 
               {remoteReviews.error && (
-                <p className="text-xs text-rose-500 mb-3">{remoteReviews.error}</p>
+                <div className="mb-3 p-3 bg-rose-50 border border-rose-200 rounded-lg">
+                  <p className="text-xs text-rose-600 font-medium mb-1">⚠️ 강의평을 불러오는 중 오류가 발생했습니다</p>
+                  <p className="text-xs text-rose-500">{remoteReviews.error}</p>
+                  <p className="text-xs text-rose-400 mt-1">브라우저 콘솔(F12)에서 자세한 정보를 확인할 수 있습니다.</p>
+                </div>
               )}
 
               {hasRemoteReviews ? (
@@ -338,6 +346,20 @@ const DetailPage = ({ selectedCourse, mockCourses }) => {
                 </div>
               ) : (
                 <div className="space-y-3">
+                  {remoteReviews.error ? (
+                    <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                      <p className="text-sm text-amber-800 font-medium mb-2">
+                        ⚠️ 실제 강의평 데이터를 불러오지 못했습니다
+                      </p>
+                      <p className="text-xs text-amber-700 mb-3">
+                        API 서버 연결에 실패하여 요약 정보를 표시합니다. 
+                        브라우저 콘솔(F12)에서 자세한 오류를 확인할 수 있습니다.
+                      </p>
+                      <p className="text-xs text-amber-600">
+                        실제 강의평 데이터는 서버가 정상 작동할 때 자동으로 표시됩니다.
+                      </p>
+                    </div>
+                  ) : null}
                   {fallbackGeneratedReviews.map((text, idx) => (
                     <div
                       key={`fallback-${idx}`}
@@ -349,13 +371,16 @@ const DetailPage = ({ selectedCourse, mockCourses }) => {
                           <span className="font-bold text-slate-900">{fallbackRatingLabel}</span>
                         </div>
                         <span className="text-xs text-slate-500">• {fallbackSemesterLabel}</span>
+                        <span className="text-xs text-slate-400 bg-slate-200 px-2 py-0.5 rounded">
+                          요약
+                        </span>
                       </div>
                       <p className="text-sm text-slate-700 leading-relaxed">
                         {text || '강의평 데이터가 준비 중입니다.'}
                       </p>
                     </div>
                   ))}
-                  {remoteReviews.total === 0 && (
+                  {!remoteReviews.error && remoteReviews.total === 0 && (
                     <p className="text-xs text-slate-500">등록된 강의평이 아직 없습니다.</p>
                   )}
                 </div>
