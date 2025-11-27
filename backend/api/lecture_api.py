@@ -1831,18 +1831,48 @@ def get_reviews_summary():
 요약:"""
         
         try:
+            print(f"🤖 AI 요약 생성 시작 (강의평 {len(review_texts)}개 사용)")
             model = genai.GenerativeModel('gemini-2.0-flash-exp')
             response = model.generate_content(prompt)
-            summary_text = response.text.strip()
+            summary_text = getattr(response, 'text', None) or str(response)
+            if isinstance(summary_text, str):
+                summary_text = summary_text.strip()
+            else:
+                summary_text = str(summary_text).strip()
+            print(f"✅ AI 요약 생성 완료 (길이: {len(summary_text)} 문자)")
         except Exception as e:
             print(f"⚠️ Gemini 모델 시도 실패, 대체 모델 사용: {e}")
             try:
                 model = genai.GenerativeModel('gemini-1.5-flash')
                 response = model.generate_content(prompt)
-                summary_text = response.text.strip()
+                summary_text = getattr(response, 'text', None) or str(response)
+                if isinstance(summary_text, str):
+                    summary_text = summary_text.strip()
+                else:
+                    summary_text = str(summary_text).strip()
+                print(f"✅ 대체 모델로 요약 생성 완료 (길이: {len(summary_text)} 문자)")
             except Exception as e2:
                 print(f"❌ AI 요약 생성 실패: {e2}")
-                summary_text = f"강의평 {len(reviews)}개를 확인했지만, AI 요약 생성 중 오류가 발생했습니다."
+                import traceback
+                traceback.print_exc()
+                # 요약 생성 실패 시에도 기본 정보 반환
+                return jsonify({
+                    'success': False,
+                    'error': f'AI 요약 생성 중 오류가 발생했습니다: {str(e2)}',
+                    'review_count': len(reviews),
+                    'course_name': course_name,
+                    'professor': professor or None
+                }), 500
+        
+        if not summary_text or len(summary_text.strip()) == 0:
+            print(f"⚠️ 생성된 요약이 비어있음")
+            return jsonify({
+                'success': False,
+                'error': '요약이 생성되지 않았습니다.',
+                'review_count': len(reviews),
+                'course_name': course_name,
+                'professor': professor or None
+            }), 500
         
         return jsonify({
             'success': True,

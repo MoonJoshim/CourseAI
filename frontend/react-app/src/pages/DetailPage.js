@@ -105,19 +105,31 @@ const DetailPage = ({ selectedCourse, mockCourses }) => {
         }
 
         const data = await response.json();
-        console.log('✅ Summary API Response:', { success: data.success, reviewCount: data.review_count });
+        console.log('✅ Summary API Response:', { 
+          success: data.success, 
+          reviewCount: data.review_count,
+          hasSummary: !!data.summary,
+          summaryLength: data.summary?.length || 0
+        });
         
-        if (!data.success) {
-          console.error('❌ API returned success=false:', data.error);
-          throw new Error(data.error || '강의평 요약을 생성하는 중 오류가 발생했습니다.');
-        }
-
         if (!isMounted) {
           return;
         }
 
+        if (!data.success) {
+          console.error('❌ API returned success=false:', data.error);
+          // API 실패 시에도 기본 요약이 있으면 표시
+          setReviewSummary({
+            text: null,
+            isLoading: false,
+            error: data.error || '강의평 요약을 생성하는 중 오류가 발생했습니다.',
+          });
+          return;
+        }
+
+        // 요약이 있으면 표시, 없으면 에러로 처리하지 않고 기본 요약 사용
         setReviewSummary({
-          text: data.summary || '강의평 요약을 생성할 수 없습니다.',
+          text: data.summary || null,
           isLoading: false,
           error: null,
         });
@@ -257,16 +269,27 @@ const DetailPage = ({ selectedCourse, mockCourses }) => {
                 <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
                   <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">{reviewSummary.text}</p>
                 </div>
-              ) : !reviewSummary.isLoading && !reviewSummary.error ? (
+              ) : reviewSummary.isLoading ? (
+                <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                  <p className="text-sm text-slate-500">요약을 생성하는 중입니다...</p>
+                </div>
+              ) : reviewSummary.error ? (
+                <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                  <p className="text-sm text-slate-500 mb-2">요약 생성 중 오류가 발생했습니다.</p>
+                  {course.aiSummary && (
+                    <div className="mt-3 pt-3 border-t border-slate-200">
+                      <p className="text-xs text-slate-500 mb-2">기본 요약 정보:</p>
+                      <p className="text-sm text-slate-700 leading-relaxed">{course.aiSummary}</p>
+                    </div>
+                  )}
+                </div>
+              ) : course.aiSummary ? (
+                <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                  <p className="text-sm text-slate-700 leading-relaxed">{course.aiSummary}</p>
+                </div>
+              ) : (
                 <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
                   <p className="text-sm text-slate-500">강의평 데이터가 없어 요약을 생성할 수 없습니다.</p>
-                </div>
-              ) : null}
-
-              {!reviewSummary.text && !reviewSummary.isLoading && !reviewSummary.error && course.aiSummary && (
-                <div className="bg-slate-50 rounded-lg p-4 border border-slate-200 mt-3">
-                  <p className="text-xs text-slate-500 mb-2">기본 요약 정보:</p>
-                  <p className="text-sm text-slate-700 leading-relaxed">{course.aiSummary}</p>
                 </div>
               )}
             </div>
