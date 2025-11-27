@@ -1,10 +1,153 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { 
   Star, User, BookOpen, GraduationCap, Clock, Calendar, MapPin, Award
 } from 'lucide-react';
 
+const API_BASE_URL = (process.env.REACT_APP_BACKEND_URL || '').replace(/\/$/, '');
+const MAX_DYNAMIC_REVIEWS = 12;
+
+const buildApiPath = (path = '') => {
+  if (!path.startsWith('/')) {
+    path = `/${path}`;
+  }
+  return API_BASE_URL ? `${API_BASE_URL}${path}` : path;
+};
+
+const normalizeKey = (value = '') => value.replace(/\s+/g, '').toLowerCase();
+
+const sortReviewsByRecency = (reviews = []) =>
+  [...reviews].sort((a = {}, b = {}) => {
+    const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+    const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+    if (dateA !== dateB) {
+      return dateB - dateA;
+    }
+    return (b.semester || '').localeCompare(a.semester || '');
+  });
+
 const DetailPage = ({ selectedCourse, mockCourses }) => {
   const course = selectedCourse || mockCourses[0];
+  const [remoteReviews, setRemoteReviews] = useState({
+    items: [],
+    total: null,
+    isLoading: false,
+    error: null,
+  });
+
+  useEffect(() => {
+    let isMounted = true;
+    const controller = new AbortController();
+
+    const fetchReviews = async () => {
+      if (!course?.name) {
+        if (isMounted) {
+          setRemoteReviews({
+            items: [],
+            total: null,
+            isLoading: false,
+            error: null,
+          });
+        }
+        return;
+      }
+
+      setRemoteReviews((prev) => ({
+        ...prev,
+        isLoading: true,
+        error: null,
+      }));
+
+      try {
+        const params = new URLSearchParams({
+          keyword: course.name,
+          limit: '50',
+          offset: '0',
+        });
+
+        const response = await fetch(buildApiPath(`/api/search?${params.toString()}`), {
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error('강의평을 불러오지 못했습니다.');
+        }
+
+        const data = await response.json();
+        const results = Array.isArray(data.results) ? data.results : [];
+        const normalizedName = normalizeKey(course.name);
+        const normalizedProfessor = normalizeKey(course.professor);
+
+        const matched =
+          results.find(
+            (item) =>
+              normalizeKey(item.course_name) === normalizedName &&
+              (!normalizedProfessor || normalizeKey(item.professor) === normalizedProfessor)
+          ) ||
+          results.find((item) => normalizeKey(item.course_name) === normalizedName) ||
+          null;
+
+        const matchedReviews = matched?.reviews ? sortReviewsByRecency(matched.reviews) : [];
+
+        if (!isMounted) {
+          return;
+        }
+
+        setRemoteReviews({
+          items: matchedReviews,
+          total: matched?.total_reviews ?? matchedReviews.length,
+          isLoading: false,
+          error: null,
+        });
+      } catch (error) {
+        if (error.name === 'AbortError') {
+          return;
+        }
+
+        if (isMounted) {
+          setRemoteReviews({
+            items: [],
+            total: null,
+            isLoading: false,
+            error: error.message || '강의평을 불러오는 중 오류가 발생했습니다.',
+          });
+        }
+      }
+    };
+
+    fetchReviews();
+
+    return () => {
+      isMounted = false;
+      controller.abort();
+    };
+  }, [course?.name, course?.professor]);
+
+  const fallbackGeneratedReviews = useMemo(() => {
+    const summary = course?.aiSummary || '';
+    const sentences = summary
+      .split(/(?<=[.!?])\s+/)
+      .map((sentence) => sentence.trim())
+      .filter(Boolean);
+
+    const baseSentences = sentences.length > 0 ? sentences : ['강의평 데이터가 준비 중입니다.'];
+    const fallbackCount = Math.min(
+      Math.max(course?.reviewCount || baseSentences.length, 2),
+      5
+    );
+
+    return Array.from({ length: fallbackCount }, (_, index) => baseSentences[index % baseSentences.length]);
+  }, [course?.aiSummary, course?.reviewCount]);
+
+  const hasRemoteReviews = remoteReviews.items.length > 0;
+  const displayedRemoteReviews = hasRemoteReviews
+    ? remoteReviews.items.slice(0, MAX_DYNAMIC_REVIEWS)
+    : [];
+  const reviewCountLabel = hasRemoteReviews
+    ? remoteReviews.total ?? displayedRemoteReviews.length
+    : course.reviewCount || fallbackGeneratedReviews.length;
+  const fallbackRatingLabel =
+    typeof course?.rating === 'number' ? course.rating.toFixed(1) : course?.rating || '4.5';
+  const fallbackSemesterLabel = course?.semester || '최근 학기';
   
   return (
     <div className="min-h-screen bg-slate-50">
@@ -105,27 +248,79 @@ const DetailPage = ({ selectedCourse, mockCourses }) => {
               </div>
             )}
 
-            {/* Actual Reviews */}
-            {course.reviewCount > 0 && (
-              <div className="bg-white rounded-lg border border-slate-200 p-6">
-                <h3 className="text-base font-bold text-slate-900 mb-4">강의평 ({course.reviewCount})</h3>
+            <div className="bg-white rounded-lg border border-slate-200 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-base font-bold text-slate-900">강의평 ({reviewCountLabel})</h3>
+                {remoteReviews.isLoading && (
+                  <span className="text-xs text-slate-500">불러오는 중...</span>
+                )}
+              </div>
+
+              {remoteReviews.error && (
+                <p className="text-xs text-rose-500 mb-3">{remoteReviews.error}</p>
+              )}
+
+              {hasRemoteReviews ? (
                 <div className="space-y-3">
-                  {/* Mock reviews based on course data */}
-                  {Array.from({length: Math.min(course.reviewCount, 5)}, (_, i) => (
-                    <div key={i} className="p-4 bg-slate-50 rounded-lg border border-slate-200">
+                  {displayedRemoteReviews.map((review, index) => (
+                    <div
+                      key={review.review_id || `${review.semester || 'review'}-${index}`}
+                      className="p-4 bg-slate-50 rounded-lg border border-slate-200"
+                    >
+                      <div className="flex items-center gap-2 mb-2">
+                        {typeof review.rating === 'number' && review.rating > 0 && (
+                          <div className="flex items-center gap-1">
+                            <Star className="w-4 h-4 text-amber-500 fill-current" />
+                            <span className="font-bold text-slate-900">
+                              {review.rating.toFixed(1)}
+                            </span>
+                          </div>
+                        )}
+                        {review.semester && (
+                          <span className="text-xs text-slate-500">• {review.semester}</span>
+                        )}
+                        {review.source && (
+                          <span className="text-xs text-slate-400 uppercase tracking-wide">
+                            {review.source}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm text-slate-700 leading-relaxed">
+                        {review.comment || review.text || '강의평 내용이 없습니다.'}
+                      </p>
+                    </div>
+                  ))}
+                  {remoteReviews.total && remoteReviews.total > displayedRemoteReviews.length && (
+                    <p className="text-xs text-slate-500 text-right">
+                      총 {remoteReviews.total}개 중 {displayedRemoteReviews.length}개만 표시 중
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {fallbackGeneratedReviews.map((text, idx) => (
+                    <div
+                      key={`fallback-${idx}`}
+                      className="p-4 bg-slate-50 rounded-lg border border-slate-200"
+                    >
                       <div className="flex items-center gap-2 mb-2">
                         <div className="flex items-center gap-1">
                           <Star className="w-4 h-4 text-amber-500 fill-current" />
-                          <span className="font-bold text-slate-900">{course.rating}</span>
+                          <span className="font-bold text-slate-900">{fallbackRatingLabel}</span>
                         </div>
-                        <span className="text-xs text-slate-500">• {course.semester || '2024-2'}</span>
+                        <span className="text-xs text-slate-500">• {fallbackSemesterLabel}</span>
                       </div>
-                      <p className="text-sm text-slate-700">{course.aiSummary ? course.aiSummary.split('.')[i] || '좋은 강의였습니다.' : '좋은 강의였습니다.'}</p>
+                      <p className="text-sm text-slate-700 leading-relaxed">
+                        {text || '강의평 데이터가 준비 중입니다.'}
+                      </p>
                     </div>
                   ))}
+                  {remoteReviews.total === 0 && (
+                    <p className="text-xs text-slate-500">등록된 강의평이 아직 없습니다.</p>
+                  )}
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
           {/* Tags & Info */}
@@ -168,28 +363,6 @@ const DetailPage = ({ selectedCourse, mockCourses }) => {
           </div>
         </div>
 
-        {/* Reviews Section (if available) */}
-        {course.reviews && course.reviews.length > 0 && (
-          <div className="mt-4 bg-white rounded-lg border border-slate-200 p-6">
-            <h3 className="text-base font-bold text-slate-900 mb-4">강의평 ({course.reviews.length})</h3>
-            <div className="space-y-3">
-              {course.reviews.map((review, index) => (
-                <div key={index} className="p-4 bg-slate-50 rounded-lg border border-slate-200">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="flex items-center gap-1">
-                      <Star className="w-4 h-4 text-amber-500 fill-current" />
-                      <span className="font-bold text-slate-900">{review.rating}</span>
-                    </div>
-                    {review.semester && (
-                      <span className="text-xs text-slate-500">• {review.semester}</span>
-                    )}
-                  </div>
-                  <p className="text-sm text-slate-700">{review.comment || review.text}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
