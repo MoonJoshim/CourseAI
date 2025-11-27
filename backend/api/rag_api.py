@@ -554,6 +554,11 @@ def synthesize_answer_with_llm(user_query: str, merged_context: Dict[str, Any], 
 6) 정보가 존재하지 않으면 절대 거짓 생성하지 말고, 사실대로 존재하지 않는다고 말할 것
 7) JSON이 아니라 자연스러운 한국어 문장으로 답변 생성
 8) 강의평에 과도하게 비난적인 내용이나 부정적인 내용은 배제하거나 순화해서 말할 것
+9) 필요시 간단한 포맷팅을 사용할 수 있습니다:
+   - 강조가 필요한 부분은 **굵게** 표시
+   - 기울임이 필요한 부분은 *기울임* 표시
+   - 여러 항목 나열 시 줄바꿈 활용
+   - 단, 과도한 포맷팅은 피하고 자연스러운 문장을 유지하세요
 
 강의 데이터(JSON):
 {json.dumps(normalized_context, ensure_ascii=False, indent=2)}"""

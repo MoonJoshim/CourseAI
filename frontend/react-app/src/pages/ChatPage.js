@@ -10,7 +10,7 @@ const API_BASE =
   RAW_API_BASE.startsWith('http://')
     ? ''
     : RAW_API_BASE;
-const REQUEST_TIMEOUT = Number(process.env.REACT_APP_AI_API_TIMEOUT || 20000);
+const REQUEST_TIMEOUT = Number(process.env.REACT_APP_AI_API_TIMEOUT || 30000);
 const DEFAULT_TOP_K = Number(process.env.REACT_APP_AI_RAG_TOP_K || 5);
 
 const formatTimestamp = (date) =>
@@ -179,7 +179,12 @@ const ChatPage = () => {
       {/* Messages */}
       <div className="max-w-6xl mx-auto px-6 py-5">
         <div className="bg-white rounded-lg border border-slate-200 min-h-[500px] max-h-[600px] flex flex-col relative">
-          <div className="flex-1 overflow-y-auto p-6 space-y-4">
+          <div 
+            className="flex-1 overflow-y-auto p-6 space-y-4"
+            style={{ 
+              paddingBottom: isPromptsExpanded ? '1.5rem' : '90px' 
+            }}
+          >
         {messages.map((message) => (
           <div
             key={message.id}
@@ -216,7 +221,7 @@ const ChatPage = () => {
                 dangerouslySetInnerHTML={{ __html: renderMarkdown(message.content) }}
               />
               {message.metadata?.topReviews?.length ? (
-                <div className="mt-3 text-xs text-slate-500 space-y-2">
+                <div className="mt-10 text-xs text-slate-500 space-y-2">
                   <p className="font-medium text-slate-600">관련 강의평 근거</p>
                   <ul className="list-none space-y-2">
                     {message.metadata.topReviews.map((review, idx) => (
