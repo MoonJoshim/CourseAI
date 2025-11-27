@@ -7,6 +7,22 @@
     {
       "source": "/api/v2/rag/:path*",
       "destination": "http://34.56.30.245:5005/api/v2/rag/:path*"
+    },
+    {
+      "source": "/api/search",
+      "destination": "http://34.56.30.245:5002/api/search"
+    },
+    {
+      "source": "/api/software-courses",
+      "destination": "http://34.56.30.245:5002/api/software-courses"
+    },
+    {
+      "source": "/api/reviews/from-pinecone",
+      "destination": "http://34.56.30.245:5002/api/reviews/from-pinecone"
+    },
+    {
+      "source": "/api/reviews/summary",
+      "destination": "http://34.56.30.245:5002/api/reviews/summary"
     }
   ]
 }

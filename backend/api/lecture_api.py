@@ -1583,27 +1583,315 @@ def health_db():
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
 
-if __name__ == '__main__':
-    import atexit
-    import signal
-
-    atexit.register(cleanup_driver)
-
-    def signal_handler(sig, frame):
-        print("\n🛑 서버 종료 신호 감지")
-        cleanup_driver()
-        sys.exit(0)
-
-    signal.signal(signal.SIGINT, signal_handler)
-    signal.signal(signal.SIGTERM, signal_handler)
-
-    print("🚀 에브리타임 강의평 크롤링 API 서버 시작")
-    print("📍 http://34.58.143.2:5002")
-
+@app.route('/api/reviews/from-pinecone', methods=['GET'])
+def get_reviews_from_pinecone():
+    """Pinecone에서 특정 강의의 강의평 목록 가져오기"""
     try:
-        app.run(debug=True, host='0.0.0.0', port=5002)
-    finally:
-        cleanup_driver()
+        from pinecone import Pinecone
+        
+        course_name = request.args.get('course_name', '').strip()
+        professor = request.args.get('professor', '').strip()
+        limit = int(request.args.get('limit', 100))
+        
+        print(f"🔍 Pinecone 강의평 조회 요청: course_name='{course_name}', professor='{professor}', limit={limit}")
+        
+        if not course_name:
+            return jsonify({
+                'success': False,
+                'error': 'course_name 파라미터가 필요합니다.'
+            }), 400
+        
+        PINECONE_API_KEY = os.getenv('PINECONE_API_KEY')
+        PINECONE_INDEX = os.getenv('PINECONE_INDEX', 'courses-dev')
+        
+        if not PINECONE_API_KEY:
+            return jsonify({'success': False, 'error': 'PINECONE_API_KEY not set'}), 500
+        
+        pc = Pinecone(api_key=PINECONE_API_KEY)
+        index = pc.Index(PINECONE_INDEX)
+        
+        # 모든 강의평 벡터 가져오기
+        print(f"📊 Pinecone에서 강의평 조회 중... (index: {PINECONE_INDEX})")
+        results = index.query(
+            vector=[0.0] * 768,
+            top_k=10000,
+            include_metadata=True
+        )
+        print(f"✅ Pinecone에서 {len(results.matches)}개 벡터 조회 완료")
+        
+        # 강의평 목록 생성 및 필터링
+        reviews = []
+        normalized_course_name = course_name.strip().lower()
+        normalized_professor = professor.strip().lower() if professor else None
+        
+        print(f"🔍 필터링 기준: course_name='{normalized_course_name}', professor='{normalized_professor}'")
+        
+        matched_count = 0
+        for match in results.matches:
+            meta = match.metadata
+            if not meta:
+                continue
+            
+            # 강의명 필터링 (대소문자 무시, 부분 일치도 허용)
+            meta_course_name = meta.get('course_name', '').strip()
+            if not meta_course_name:
+                continue
+            
+            meta_course_name_lower = meta_course_name.lower()
+            # 정확 일치 또는 서로 포함 관계 확인
+            if (meta_course_name_lower != normalized_course_name and 
+                normalized_course_name not in meta_course_name_lower and
+                meta_course_name_lower not in normalized_course_name):
+                continue
+            
+            # 교수명 필터링 (제공된 경우, 대소문자 무시)
+            if normalized_professor:
+                meta_professor = meta.get('professor', '').strip()
+                if not meta_professor:
+                    continue
+                meta_professor_lower = meta_professor.lower()
+                # 정확 일치 또는 서로 포함 관계 확인
+                if (meta_professor_lower != normalized_professor and
+                    normalized_professor not in meta_professor_lower and
+                    meta_professor_lower not in normalized_professor):
+                    continue
+            
+            matched_count += 1
+            
+            # rating 안전하게 변환
+            rating_value = meta.get('rating', 0)
+            try:
+                if isinstance(rating_value, str):
+                    rating_value = float(rating_value)
+                elif not isinstance(rating_value, (int, float)):
+                    rating_value = 0.0
+                else:
+                    rating_value = float(rating_value)
+            except (ValueError, TypeError):
+                rating_value = 0.0
+            
+            review_data = {
+                'review_id': match.id,
+                'rating': rating_value,
+                'comment': meta.get('text', ''),
+                'text': meta.get('text', ''),
+                'semester': meta.get('semester', ''),
+                'course_name': meta.get('course_name', ''),
+                'professor': meta.get('professor', ''),
+                'department': meta.get('department', ''),
+                'source': meta.get('source', 'pinecone'),
+                'created_at': meta.get('uploaded_at', ''),
+                'year': meta.get('year', None)
+            }
+            reviews.append(review_data)
+            
+            # 첫 3개 강의평의 rating 로깅 (디버깅용)
+            if len(reviews) <= 3:
+                print(f"  📝 Review {len(reviews)}: rating={rating_value} (type={type(rating_value).__name__}), semester={review_data['semester']}")
+        
+        # 최신순 정렬 (semester와 uploaded_at 기준)
+        reviews.sort(key=lambda x: (
+            x.get('year', 0) or 0,
+            x.get('semester', ''),
+            x.get('created_at', '')
+        ), reverse=True)
+        
+        # limit 적용
+        reviews = reviews[:limit]
+        
+        print(f"✅ 필터링 완료: {matched_count}개 매칭, {len(reviews)}개 반환 (limit={limit})")
+        
+        return jsonify({
+            'success': True,
+            'reviews': reviews,
+            'total': len(reviews),
+            'course_name': course_name,
+            'professor': professor or None
+        })
+        
+    except Exception as e:
+        import traceback
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }), 500
+
+@app.route('/api/reviews/summary', methods=['GET'])
+def get_reviews_summary():
+    """강의평을 기반으로 AI 요약 생성 (강의 특징, 교수 스타일, 장단점)"""
+    try:
+        from pinecone import Pinecone
+        import google.generativeai as genai
+        
+        course_name = request.args.get('course_name', '').strip()
+        professor = request.args.get('professor', '').strip()
+        
+        print(f"📝 강의평 요약 생성 요청: course_name='{course_name}', professor='{professor}'")
+        
+        if not course_name:
+            return jsonify({
+                'success': False,
+                'error': 'course_name 파라미터가 필요합니다.'
+            }), 400
+        
+        # Pinecone에서 강의평 가져오기
+        PINECONE_API_KEY = os.getenv('PINECONE_API_KEY')
+        PINECONE_INDEX = os.getenv('PINECONE_INDEX', 'courses-dev')
+        
+        if not PINECONE_API_KEY:
+            return jsonify({'success': False, 'error': 'PINECONE_API_KEY not set'}), 500
+        
+        pc = Pinecone(api_key=PINECONE_API_KEY)
+        index = pc.Index(PINECONE_INDEX)
+        
+        # 강의평 조회
+        results = index.query(
+            vector=[0.0] * 768,
+            top_k=10000,
+            include_metadata=True
+        )
+        
+        # 필터링
+        reviews = []
+        normalized_course_name = course_name.strip().lower()
+        normalized_professor = professor.strip().lower() if professor else None
+        
+        for match in results.matches:
+            meta = match.metadata
+            if not meta:
+                continue
+            
+            meta_course_name = meta.get('course_name', '').strip()
+            if not meta_course_name:
+                continue
+            
+            meta_course_name_lower = meta_course_name.lower()
+            if (meta_course_name_lower != normalized_course_name and 
+                normalized_course_name not in meta_course_name_lower and
+                meta_course_name_lower not in normalized_course_name):
+                continue
+            
+            if normalized_professor:
+                meta_professor = meta.get('professor', '').strip()
+                if not meta_professor:
+                    continue
+                meta_professor_lower = meta_professor.lower()
+                if (meta_professor_lower != normalized_professor and
+                    normalized_professor not in meta_professor_lower and
+                    meta_professor_lower not in normalized_professor):
+                    continue
+            
+            review_text = meta.get('text', '').strip()
+            if review_text:
+                reviews.append(review_text)
+        
+        if not reviews:
+            return jsonify({
+                'success': True,
+                'summary': '강의평 데이터가 없어 요약을 생성할 수 없습니다.',
+                'course_name': course_name,
+                'professor': professor or None
+            })
+        
+        # AI 요약 생성
+        GEMINI_API_KEY = os.getenv('GEMINI_API_KEY') or os.getenv('GOOGLE_GEMINI_API_KEY')
+        if not GEMINI_API_KEY:
+            return jsonify({'success': False, 'error': 'GEMINI_API_KEY not set'}), 500
+        
+        genai.configure(api_key=GEMINI_API_KEY)
+        
+        # 최대 20개 강의평만 사용 (토큰 제한 고려)
+        review_texts = reviews[:20]
+        reviews_text = '\n\n'.join([f"강의평 {i+1}: {text}" for i, text in enumerate(review_texts)])
+        
+        prompt = f"""다음은 "{course_name}" 강의의 실제 수강생 강의평입니다. {"교수님은 " + professor + "입니다." if professor else ""}
+
+강의평 목록:
+{reviews_text}
+
+위 강의평들을 바탕으로 다음 형식으로 자연스러운 한국어 문장으로 요약해주세요:
+
+1. 강의 특징 요약
+(강의의 주요 특징, 수업 방식, 커리큘럼 등을 요약)
+
+2. 교수님의 강의 스타일/특징 요약
+(교수님의 강의 방식, 설명 스타일, 학생 대응 등을 요약)
+
+3. 장점/단점 정리
+(강의평에서 언급된 장점과 단점을 정리)
+
+중요한 주의사항:
+- 존재하지 않는 정보는 절대 생성하지 마세요. 강의평에 없는 내용은 작성하지 마세요.
+- JSON 형식이 아닌 자연스러운 한국어 문장으로 작성해주세요.
+- 과도하게 비난적인 내용이나 부정적인 내용은 언급하지 마세요. 교수님이 볼 수도 있다고 생각하고, 객관적이고 건설적인 표현만 사용하세요.
+- 비판적인 내용이 있어도 그것을 건설적인 피드백이나 개선점으로 재구성하여 표현하세요.
+- 각 섹션은 명확하게 구분되어야 합니다.
+
+요약:"""
+        
+        try:
+            print(f"🤖 AI 요약 생성 시작 (강의평 {len(review_texts)}개 사용)")
+            model = genai.GenerativeModel('gemini-2.0-flash-exp')
+            response = model.generate_content(prompt)
+            summary_text = getattr(response, 'text', None) or str(response)
+            if isinstance(summary_text, str):
+                summary_text = summary_text.strip()
+            else:
+                summary_text = str(summary_text).strip()
+            print(f"✅ AI 요약 생성 완료 (길이: {len(summary_text)} 문자)")
+        except Exception as e:
+            print(f"⚠️ Gemini 모델 시도 실패, 대체 모델 사용: {e}")
+            try:
+                model = genai.GenerativeModel('gemini-1.5-flash')
+                response = model.generate_content(prompt)
+                summary_text = getattr(response, 'text', None) or str(response)
+                if isinstance(summary_text, str):
+                    summary_text = summary_text.strip()
+                else:
+                    summary_text = str(summary_text).strip()
+                print(f"✅ 대체 모델로 요약 생성 완료 (길이: {len(summary_text)} 문자)")
+            except Exception as e2:
+                print(f"❌ AI 요약 생성 실패: {e2}")
+                import traceback
+                traceback.print_exc()
+                # 요약 생성 실패 시에도 기본 정보 반환
+                return jsonify({
+                    'success': False,
+                    'error': f'AI 요약 생성 중 오류가 발생했습니다: {str(e2)}',
+                    'review_count': len(reviews),
+                    'course_name': course_name,
+                    'professor': professor or None
+                }), 500
+        
+        if not summary_text or len(summary_text.strip()) == 0:
+            print(f"⚠️ 생성된 요약이 비어있음")
+            return jsonify({
+                'success': False,
+                'error': '요약이 생성되지 않았습니다.',
+                'review_count': len(reviews),
+                'course_name': course_name,
+                'professor': professor or None
+            }), 500
+        
+        return jsonify({
+            'success': True,
+            'summary': summary_text,
+            'review_count': len(reviews),
+            'course_name': course_name,
+            'professor': professor or None
+        })
+        
+    except Exception as e:
+        import traceback
+        print(f"❌ 요약 생성 오류: {e}")
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }), 500
+
 @app.route('/api/courses/from-pinecone', methods=['GET'])
 def get_courses_from_pinecone():
     """Pinecone에서 강의 목록 가져오기 (강의평 기반으로 요약)"""
@@ -1723,3 +2011,25 @@ def get_courses_from_pinecone():
             'error': str(e),
             'traceback': traceback.format_exc()
         }), 500
+
+if __name__ == '__main__':
+    import atexit
+    import signal
+
+    atexit.register(cleanup_driver)
+
+    def signal_handler(sig, frame):
+        print("\n🛑 서버 종료 신호 감지")
+        cleanup_driver()
+        sys.exit(0)
+
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+
+    print("🚀 에브리타임 강의평 크롤링 API 서버 시작")
+    print("📍 http://34.58.143.2:5002")
+
+    try:
+        app.run(debug=True, host='0.0.0.0', port=5002)
+    finally:
+        cleanup_driver()

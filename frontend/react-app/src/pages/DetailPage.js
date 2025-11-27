@@ -1,10 +1,163 @@
-import React from 'react';
-import { 
+import React, { useEffect, useState } from 'react';
+import {
   Star, User, BookOpen, GraduationCap, Clock, Calendar, MapPin, Award
 } from 'lucide-react';
 
+const resolveApiBaseUrl = () => {
+  const envBase = (process.env.REACT_APP_BACKEND_URL || '').trim().replace(/\/$/, '');
+
+  if (typeof window === 'undefined') {
+    return envBase;
+  }
+
+  const isSecurePage = window.location.protocol === 'https:';
+
+  if (envBase) {
+    const isEnvSecure = envBase.startsWith('https://');
+    const isEnvRelative = envBase.startsWith('/');
+
+    if (isEnvSecure || !isSecurePage || isEnvRelative) {
+      return envBase;
+    }
+
+    if (envBase.startsWith('http://') && isSecurePage) {
+      return '';
+    }
+  }
+
+  return '';
+};
+
+const buildApiPath = (path = '') => {
+  const base = resolveApiBaseUrl();
+  if (!path.startsWith('/')) {
+    path = `/${path}`;
+  }
+  return base ? `${base}${path}` : path;
+};
+
 const DetailPage = ({ selectedCourse, mockCourses }) => {
   const course = selectedCourse || mockCourses[0];
+  const [reviewSummary, setReviewSummary] = useState({
+    text: null,
+    isLoading: false,
+    error: null,
+  });
+
+  useEffect(() => {
+    let isMounted = true;
+    const controller = new AbortController();
+
+    const fetchReviewSummary = async () => {
+      if (!course?.name) {
+        if (isMounted) {
+          setReviewSummary({
+            text: null,
+            isLoading: false,
+            error: null,
+          });
+        }
+        return;
+      }
+
+      setReviewSummary((prev) => ({
+        ...prev,
+        isLoading: true,
+        error: null,
+      }));
+
+      try {
+        // 강의평 요약 API 호출
+        const apiUrl = buildApiPath(`/api/reviews/summary`);
+        const params = new URLSearchParams({
+          course_name: course.name,
+        });
+        
+        if (course.professor) {
+          params.append('professor', course.professor);
+        }
+
+        const fullUrl = `${apiUrl}?${params.toString()}`;
+        console.log('📝 Fetching review summary from:', fullUrl);
+        console.log('📋 Course info:', { name: course.name, professor: course.professor });
+
+        const response = await fetch(fullUrl, {
+          signal: controller.signal,
+          headers: {
+            'Accept': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text().catch(() => '');
+          console.error('❌ API Error:', response.status, errorText);
+          throw new Error(`강의평 요약을 불러오지 못했습니다. (${response.status})`);
+        }
+
+        const contentType = response.headers.get('content-type') || '';
+        if (!contentType.includes('application/json')) {
+          const text = await response.text();
+          console.error('❌ Non-JSON response:', text.substring(0, 200));
+          if (text.trim().startsWith('<!')) {
+            throw new Error('서버 설정 오류: API 엔드포인트를 찾을 수 없습니다.');
+          }
+          throw new Error('예상하지 못한 응답 형식입니다.');
+        }
+
+        const data = await response.json();
+        console.log('✅ Summary API Response:', { 
+          success: data.success, 
+          reviewCount: data.review_count,
+          hasSummary: !!data.summary,
+          summaryLength: data.summary?.length || 0
+        });
+        
+        if (!isMounted) {
+          return;
+        }
+
+        if (!data.success) {
+          console.error('❌ API returned success=false:', data.error);
+          // API 실패 시에도 기본 요약이 있으면 표시
+          setReviewSummary({
+            text: null,
+            isLoading: false,
+            error: data.error || '강의평 요약을 생성하는 중 오류가 발생했습니다.',
+          });
+          return;
+        }
+
+        // 요약이 있으면 표시, 없으면 에러로 처리하지 않고 기본 요약 사용
+        setReviewSummary({
+          text: data.summary || null,
+          isLoading: false,
+          error: null,
+        });
+      } catch (error) {
+        if (error.name === 'AbortError') {
+          return;
+        }
+
+        console.error('❌ Error fetching review summary:', error);
+        
+        if (isMounted) {
+          setReviewSummary({
+            text: null,
+            isLoading: false,
+            error: error.message || '강의평 요약을 불러오는 중 오류가 발생했습니다.',
+          });
+        }
+      }
+    };
+
+    fetchReviewSummary();
+
+    return () => {
+      isMounted = false;
+      controller.abort();
+    };
+  }, [course?.name, course?.professor]);
+
   
   return (
     <div className="min-h-screen bg-slate-50">
@@ -93,39 +246,53 @@ const DetailPage = ({ selectedCourse, mockCourses }) => {
         </div>
 
         <div className="grid grid-cols-3 gap-4">
-          {/* Reviews */}
+          {/* Reviews Summary */}
           <div className="col-span-2 space-y-4">
-            {/* AI Summary */}
-            {course.aiSummary && (
-              <div className="bg-white rounded-lg border border-slate-200 p-6">
-                <h3 className="text-base font-bold text-slate-900 mb-4">수강생 평가 요약</h3>
-                <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-                  <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">{course.aiSummary}</p>
-                </div>
+            {/* 수강생 평가 요약 */}
+            <div className="bg-white rounded-lg border border-slate-200 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-base font-bold text-slate-900">수강생 평가 요약</h3>
+                {reviewSummary.isLoading && (
+                  <span className="text-xs text-slate-500">요약 생성 중...</span>
+                )}
               </div>
-            )}
 
-            {/* Actual Reviews */}
-            {course.reviewCount > 0 && (
-              <div className="bg-white rounded-lg border border-slate-200 p-6">
-                <h3 className="text-base font-bold text-slate-900 mb-4">강의평 ({course.reviewCount})</h3>
-                <div className="space-y-3">
-                  {/* Mock reviews based on course data */}
-                  {Array.from({length: Math.min(course.reviewCount, 5)}, (_, i) => (
-                    <div key={i} className="p-4 bg-slate-50 rounded-lg border border-slate-200">
-                      <div className="flex items-center gap-2 mb-2">
-                        <div className="flex items-center gap-1">
-                          <Star className="w-4 h-4 text-amber-500 fill-current" />
-                          <span className="font-bold text-slate-900">{course.rating}</span>
-                        </div>
-                        <span className="text-xs text-slate-500">• {course.semester || '2024-2'}</span>
-                      </div>
-                      <p className="text-sm text-slate-700">{course.aiSummary ? course.aiSummary.split('.')[i] || '좋은 강의였습니다.' : '좋은 강의였습니다.'}</p>
-                    </div>
-                  ))}
+              {reviewSummary.error && (
+                <div className="mb-3 p-3 bg-rose-50 border border-rose-200 rounded-lg">
+                  <p className="text-xs text-rose-600 font-medium mb-1">⚠️ 강의평 요약을 불러오는 중 오류가 발생했습니다</p>
+                  <p className="text-xs text-rose-500">{reviewSummary.error}</p>
+                  <p className="text-xs text-rose-400 mt-1">브라우저 콘솔(F12)에서 자세한 정보를 확인할 수 있습니다.</p>
                 </div>
-              </div>
-            )}
+              )}
+
+              {reviewSummary.text ? (
+                <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                  <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">{reviewSummary.text}</p>
+                </div>
+              ) : reviewSummary.isLoading ? (
+                <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                  <p className="text-sm text-slate-500">요약을 생성하는 중입니다...</p>
+                </div>
+              ) : reviewSummary.error ? (
+                <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                  <p className="text-sm text-slate-500 mb-2">요약 생성 중 오류가 발생했습니다.</p>
+                  {course.aiSummary && (
+                    <div className="mt-3 pt-3 border-t border-slate-200">
+                      <p className="text-xs text-slate-500 mb-2">기본 요약 정보:</p>
+                      <p className="text-sm text-slate-700 leading-relaxed">{course.aiSummary}</p>
+                    </div>
+                  )}
+                </div>
+              ) : course.aiSummary ? (
+                <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                  <p className="text-sm text-slate-700 leading-relaxed">{course.aiSummary}</p>
+                </div>
+              ) : (
+                <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                  <p className="text-sm text-slate-500">강의평 데이터가 없어 요약을 생성할 수 없습니다.</p>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Tags & Info */}
@@ -168,28 +335,6 @@ const DetailPage = ({ selectedCourse, mockCourses }) => {
           </div>
         </div>
 
-        {/* Reviews Section (if available) */}
-        {course.reviews && course.reviews.length > 0 && (
-          <div className="mt-4 bg-white rounded-lg border border-slate-200 p-6">
-            <h3 className="text-base font-bold text-slate-900 mb-4">강의평 ({course.reviews.length})</h3>
-            <div className="space-y-3">
-              {course.reviews.map((review, index) => (
-                <div key={index} className="p-4 bg-slate-50 rounded-lg border border-slate-200">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="flex items-center gap-1">
-                      <Star className="w-4 h-4 text-amber-500 fill-current" />
-                      <span className="font-bold text-slate-900">{review.rating}</span>
-                    </div>
-                    {review.semester && (
-                      <span className="text-xs text-slate-500">• {review.semester}</span>
-                    )}
-                  </div>
-                  <p className="text-sm text-slate-700">{review.comment || review.text}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
