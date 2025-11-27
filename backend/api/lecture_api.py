@@ -1658,9 +1658,21 @@ def get_reviews_from_pinecone():
             
             matched_count += 1
             
+            # rating 안전하게 변환
+            rating_value = meta.get('rating', 0)
+            try:
+                if isinstance(rating_value, str):
+                    rating_value = float(rating_value)
+                elif not isinstance(rating_value, (int, float)):
+                    rating_value = 0.0
+                else:
+                    rating_value = float(rating_value)
+            except (ValueError, TypeError):
+                rating_value = 0.0
+            
             review_data = {
                 'review_id': match.id,
-                'rating': float(meta.get('rating', 0)),
+                'rating': rating_value,
                 'comment': meta.get('text', ''),
                 'text': meta.get('text', ''),
                 'semester': meta.get('semester', ''),

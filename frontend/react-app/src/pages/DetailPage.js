@@ -316,14 +316,19 @@ const DetailPage = ({ selectedCourse, mockCourses }) => {
                       className="p-4 bg-slate-50 rounded-lg border border-slate-200"
                     >
                       <div className="flex items-center gap-2 mb-2">
-                        {typeof review.rating === 'number' && review.rating > 0 && (
-                          <div className="flex items-center gap-1">
-                            <Star className="w-4 h-4 text-amber-500 fill-current" />
-                            <span className="font-bold text-slate-900">
-                              {review.rating.toFixed(1)}
-                            </span>
-                          </div>
-                        )}
+                        {(() => {
+                          const rating = typeof review.rating === 'number' 
+                            ? review.rating 
+                            : (typeof review.rating === 'string' ? parseFloat(review.rating) : 0);
+                          return rating > 0 ? (
+                            <div className="flex items-center gap-1">
+                              <Star className="w-4 h-4 text-amber-500 fill-current" />
+                              <span className="font-bold text-slate-900">
+                                {rating.toFixed(1)}
+                              </span>
+                            </div>
+                          ) : null;
+                        })()}
                         {review.semester && (
                           <span className="text-xs text-slate-500">• {review.semester}</span>
                         )}
