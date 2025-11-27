@@ -1583,27 +1583,6 @@ def health_db():
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
 
-if __name__ == '__main__':
-    import atexit
-    import signal
-
-    atexit.register(cleanup_driver)
-
-    def signal_handler(sig, frame):
-        print("\n🛑 서버 종료 신호 감지")
-        cleanup_driver()
-        sys.exit(0)
-
-    signal.signal(signal.SIGINT, signal_handler)
-    signal.signal(signal.SIGTERM, signal_handler)
-
-    print("🚀 에브리타임 강의평 크롤링 API 서버 시작")
-    print("📍 http://34.58.143.2:5002")
-
-    try:
-        app.run(debug=True, host='0.0.0.0', port=5002)
-    finally:
-        cleanup_driver()
 @app.route('/api/reviews/from-pinecone', methods=['GET'])
 def get_reviews_from_pinecone():
     """Pinecone에서 특정 강의의 강의평 목록 가져오기"""
@@ -1817,3 +1796,25 @@ def get_courses_from_pinecone():
             'error': str(e),
             'traceback': traceback.format_exc()
         }), 500
+
+if __name__ == '__main__':
+    import atexit
+    import signal
+
+    atexit.register(cleanup_driver)
+
+    def signal_handler(sig, frame):
+        print("\n🛑 서버 종료 신호 감지")
+        cleanup_driver()
+        sys.exit(0)
+
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+
+    print("🚀 에브리타임 강의평 크롤링 API 서버 시작")
+    print("📍 http://34.58.143.2:5002")
+
+    try:
+        app.run(debug=True, host='0.0.0.0', port=5002)
+    finally:
+        cleanup_driver()
