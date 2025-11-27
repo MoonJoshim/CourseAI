@@ -1,7 +1,8 @@
 import React, { useState, useRef } from 'react';
 import { MessageSquare, Send, User, PauseCircle } from 'lucide-react';
 
-const CHAT_ENDPOINT = '/api/rag/chat';
+// const CHAT_ENDPOINT = '/api/rag/chat';
+const CHAT_ENDPOINT = '/api/v2/rag/chat';
 const RAW_API_BASE = (process.env.REACT_APP_AI_API_BASE_URL || '').replace(/\/$/, '');
 const API_BASE =
   typeof window !== 'undefined' &&
@@ -48,6 +49,7 @@ const ChatPage = () => {
     const currentInput = inputMessage;
     setInputMessage('');
 
+    // 대화 히스토리 구성
     const history = messages
       .filter((m) => m.type === 'user' || m.type === 'assistant')
       .reduce((acc, m, idx, arr) => {
@@ -68,7 +70,8 @@ const ChatPage = () => {
 
     try {
       setIsSending(true);
-      const payload = { message: currentInput, history, top_k: DEFAULT_TOP_K };
+      // v2 API는 query와 history를 받습니다
+      const payload = { query: currentInput, history };
       const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -83,15 +86,17 @@ const ChatPage = () => {
       }
 
       const data = await res.json();
-      const content = data.response || data.answer || '응답을 받지 못했습니다.';
+      // v2 API는 answer 필드를 반환합니다
+      const content = data.answer || data.response || '응답을 받지 못했습니다.';
       const aiResponse = {
         id: Date.now(),
         type: 'assistant',
         content,
         timestamp: new Date(),
         metadata: {
-          topReviews: data.top_reviews,
+          topReviews: data.top_reviews || [],
           provider: data.provider,
+          debug: data.debug, // v2 API의 debug 정보
         },
       };
       setMessages((prev) => [...prev, aiResponse]);
@@ -117,7 +122,7 @@ const ChatPage = () => {
 
   const quickQuestions = [
     '데이터베이스 강의 중 평점 높은 교수님은?',
-    '노팀플이면서 과제 적당한 강의 추천해줘',
+    '팀플 없으면서 과제 적당한 강의 추천해줘',
     '웹 개발 배우기 좋은 강의는?',
     '알고리즘 강의 교수님별 차이점 알려줘',
     '객체지향프로그래밍 어느 교수님이 좋아?',

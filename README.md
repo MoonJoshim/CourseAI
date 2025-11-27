@@ -17,7 +17,7 @@ CourseAI는 실제 수강생들의 강의평 데이터(380개 이상)를 기반�
 - 수강생 평가 요약 AI 분석 제공
 
 ### 2. 개설과목 현황 ✅
-- 2025-2학기 전체 개설과목 조회 (3047개 과목)
+- 2025-2학기 소프트웨어학과 개설과목 조회
 - 전공필수 / 전공선택 / 교양선택 탭 분류
 - 강의 시간, 교수, 학점, 강의실 등 상세 정보
 - 그리드/리스트 뷰 전환 기능
@@ -150,12 +150,11 @@ npm start
 - `GET /api/courses/from-pinecone` - Pinecone 강의 목록
 
 ### AI 채팅 API (Port 5003)
-- `POST /api/chat` - RAG 기반 대화
+- `POST /api/v2/rag/chat` - RAG 기반 대화
   ```json
   {
-    "message": "노팀플 강의 추천해줘",
-    "history": [],
-    "top_k": 5
+    "message": "팀플 없는 강의 추천해줘",
+    "history": []
   }
   ```
 
