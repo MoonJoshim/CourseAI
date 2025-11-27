@@ -372,17 +372,219 @@ def semantic_search_pinecone(query: str, candidates: Optional[List[Dict[str, Any
         return []
 
 def merge_results(mongo_candidates: Optional[List[Dict[str, Any]]], pinecone_results: List[Dict[str, Any]]) -> Dict[str, Any]:
-    """두 결과를 merge → 강의 정보 + 리뷰 정보 통합"""
-    # TODO: 구현 필요
+    """
+    두 결과를 merge → 강의 정보 + 리뷰 정보 통합
+    
+    Args:
+        mongo_candidates: MongoDB에서 검색된 강의 정보 리스트
+        pinecone_results: Pinecone에서 검색된 강의평 리스트
+        
+    Returns:
+        Dict: 병합된 강의 정보 (course_name별로 그룹화, 리뷰 포함)
+    """
+    # course_name별로 강의평 그룹화
+    reviews_by_course = defaultdict(list)
+    
+    for review in pinecone_results:
+        metadata = review.get("metadata", {})
+        course_name = metadata.get("course_name", "")
+        
+        if course_name:
+            review_data = {
+                "text": review.get("text", ""),
+                "review_id": metadata.get("original_id", ""),
+                "sentiment": None  # 향후 감정 분석 추가 가능
+            }
+            reviews_by_course[course_name].append(review_data)
+    
+    # MongoDB 강의 정보가 있는 경우
+    if mongo_candidates:
+        courses = []
+        mongo_course_map = {course.get("course_name", ""): course for course in mongo_candidates if course.get("course_name")}
+        
+        for course_name, reviews in reviews_by_course.items():
+            mongo_course = mongo_course_map.get(course_name, {})
+            
+            course_entry = {
+                "course_name": course_name,
+                "professor": mongo_course.get("professor", ""),
+                "department": mongo_course.get("department", ""),
+                "rating": mongo_course.get("rating", 0.0) or mongo_course.get("average_rating", 0.0),
+                "review_count": len(reviews),
+                "reviews": reviews
+            }
+            courses.append(course_entry)
+        
+        # MongoDB에 있지만 리뷰가 없는 강의도 추가
+        for course in mongo_candidates:
+            course_name = course.get("course_name", "")
+            if course_name and course_name not in reviews_by_course:
+                course_entry = {
+                    "course_name": course_name,
+                    "professor": course.get("professor", ""),
+                    "department": course.get("department", ""),
+                    "rating": course.get("rating", 0.0) or course.get("average_rating", 0.0),
+                    "review_count": 0,
+                    "reviews": []
+                }
+                courses.append(course_entry)
+    else:
+        # MongoDB 후보가 없는 경우 (semantic-only queries)
+        # Pinecone metadata에서만 강의 정보 추출
+        courses = []
+        course_info_map = {}
+        
+        for review in pinecone_results:
+            metadata = review.get("metadata", {})
+            course_name = metadata.get("course_name", "")
+            
+            if course_name and course_name not in course_info_map:
+                course_info_map[course_name] = {
+                    "professor": metadata.get("professor", ""),
+                    "department": metadata.get("department", ""),
+                    "rating": metadata.get("rating", 0.0)
+                }
+        
+        for course_name, reviews in reviews_by_course.items():
+            info = course_info_map.get(course_name, {})
+            course_entry = {
+                "course_name": course_name,
+                "professor": info.get("professor", ""),
+                "department": info.get("department", ""),
+                "rating": float(info.get("rating", 0.0)) if info.get("rating") else 0.0,
+                "review_count": len(reviews),
+                "reviews": reviews
+            }
+            courses.append(course_entry)
+    
     return {
-        "courses": mongo_candidates or [],
-        "reviews": pinecone_results
+        "courses": courses
     }
 
+def normalize_context(merged_context: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    병합된 컨텍스트를 정규화하여 LLM 프롬프트에 안전하게 사용할 수 있도록 처리
+    
+    Args:
+        merged_context: merge_results()의 출력
+        
+    Returns:
+        Dict: 정규화된 컨텍스트 (모든 필수 필드 보장, 리뷰 텍스트 길이 제한)
+    """
+    normalized = {
+        "courses": []
+    }
+    
+    for course in merged_context.get("courses", []):
+        # 필수 필드 보장
+        normalized_course = {
+            "course_name": course.get("course_name", ""),
+            "professor": course.get("professor", ""),
+            "department": course.get("department", ""),
+            "rating": float(course.get("rating", 0.0)),
+            "review_count": int(course.get("review_count", 0)),
+            "reviews": []
+        }
+        
+        # 리뷰 정규화 (텍스트 길이 제한)
+        reviews = course.get("reviews", [])
+        for review in reviews:
+            review_text = review.get("text", "")
+            # 리뷰 텍스트가 너무 길면 첫 200자만 사용
+            if len(review_text) > 200:
+                review_text = review_text[:200] + "..."
+            
+            normalized_review = {
+                "text": review_text,
+                "review_id": review.get("review_id", ""),
+                "sentiment": review.get("sentiment")
+            }
+            normalized_course["reviews"].append(normalized_review)
+        
+        # review_count를 실제 리뷰 개수로 업데이트
+        normalized_course["review_count"] = len(normalized_course["reviews"])
+        
+        normalized["courses"].append(normalized_course)
+    
+    return normalized
+
 def synthesize_answer_with_llm(user_query: str, merged_context: Dict[str, Any]) -> str:
-    """LLM 최종 응답 생성 (Gemini)"""
-    # TODO: 구현 필요
-    return "답변 생성 중..."
+    """
+    LLM 최종 응답 생성 (Gemini)
+    
+    Args:
+        user_query: 사용자 질문
+        merged_context: merge_results()의 출력
+        
+    Returns:
+        str: Gemini가 생성한 최종 답변
+    """
+    try:
+        # 컨텍스트 정규화
+        normalized_context = normalize_context(merged_context)
+        
+        # 프롬프트 구성
+        prompt = f"""사용자 질문:
+{user_query}
+
+아래는 데이터베이스에서 검색된 강의 정보 및 강의평 리뷰 데이터입니다.
+이 정보를 기반으로 사용자에게 적절한 답변을 생성하세요.
+
+요구사항:
+1) 사용자의 질문 의도에 맞는 추천 또는 조언 제시
+2) 강의 특징 요약
+3) 교수님의 강의 스타일/특징 요약
+4) 필요한 경우 강의평을 기반으로 장점/단점 정리
+5) 여러 강의가 있을 경우 정확도 높은 순서대로 최대 5개까지 비교 후 안내
+6) 존재하지 않는 정보는 절대 생성하지 말 것
+7) JSON이 아니라 자연스러운 한국어 문장으로 답변 생성
+8) 강의평에 과도하게 비난적인 내용이나 부정적인 내용은 언급하지 말 것 (교수님이 볼 수도 있다고 생각하기)
+
+강의 데이터(JSON):
+{json.dumps(normalized_context, ensure_ascii=False, indent=2)}"""
+
+        # Gemini 모델 호출
+        model = genai.GenerativeModel("gemini-2.5-flash")
+        response = model.generate_content(prompt)
+        
+        # 응답 안전하게 처리 (ai_api.py의 generate_gemini_response와 동일한 방식)
+        # getattr로 안전하게 접근하고, 실패 시 str(response)로 fallback
+        response_text = getattr(response, 'text', None) or str(response)
+        
+        # 빈 응답이거나 에러 메시지인 경우 처리
+        if not response_text or len(response_text.strip()) == 0:
+            # candidates에서 직접 추출 시도
+            if response.candidates and len(response.candidates) > 0:
+                candidate = response.candidates[0]
+                finish_reason = getattr(candidate, 'finish_reason', None)
+                
+                # finish_reason 확인 (1=STOP 정상, 2=MAX_TOKENS, 3=SAFETY, 4=RECITATION)
+                if finish_reason == 3:  # SAFETY - 안전 필터에 걸림
+                    return "죄송합니다. 안전 필터로 인해 답변을 생성할 수 없습니다. 다른 질문을 시도해주세요."
+                elif finish_reason == 2:  # MAX_TOKENS - 토큰 제한
+                    return "답변이 너무 길어서 일부가 잘렸습니다."
+                elif finish_reason == 4:  # RECITATION - 인용 문제
+                    return "인용 문제로 인해 답변을 생성할 수 없습니다."
+                
+                # parts에서 텍스트 추출
+                if hasattr(candidate, 'content') and candidate.content:
+                    if hasattr(candidate.content, 'parts') and candidate.content.parts:
+                        parts_text = []
+                        for part in candidate.content.parts:
+                            if hasattr(part, 'text') and part.text:
+                                parts_text.append(part.text)
+                        if parts_text:
+                            return '\n'.join(parts_text)
+            
+            return "답변을 생성할 수 없습니다. 다시 시도해주세요."
+        
+        return response_text
+        
+    except Exception as e:
+        print(f"❌ LLM 답변 생성 오류: {e}")
+        import traceback
+        traceback.print_exc()
+        return f"답변 생성 중 오류가 발생했습니다: {str(e)}"
 
 # ───────────────────────────────────────────────
 # RAG Chat API 엔드포인트
