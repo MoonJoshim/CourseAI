@@ -207,14 +207,23 @@ const ChatPage = () => {
                 dangerouslySetInnerHTML={{ __html: renderMarkdown(message.content) }}
               />
               {message.metadata?.topReviews?.length ? (
-                <div className="mt-3 text-xs text-slate-500 space-y-1">
+                <div className="mt-3 text-xs text-slate-500 space-y-2">
                   <p className="font-medium text-slate-600">관련 강의평 근거</p>
-                  <ul className="list-disc pl-4 space-y-1">
+                  <ul className="list-none space-y-2">
                     {message.metadata.topReviews.map((review, idx) => (
-                      <li key={`${message.id}-review-${idx}`}>
-                        <span className="font-semibold">{review.course_name}</span>{' '}
-                        ({review.professor || '교수 정보 없음'}) – 평점 {review.rating ?? 'N/A'} /
-                        유사도 {review.similarity_score}
+                      <li key={`${message.id}-review-${idx}`} className="border-l-2 border-slate-300 pl-3">
+                        <div className="mb-1">
+                          <span className="font-semibold text-slate-700">{review.course_name}</span>
+                          {' '}({review.professor || '교수 정보 없음'})
+                          {review.rating && (
+                            <span className="ml-2 text-amber-600">★ {review.rating}</span>
+                          )}
+                        </div>
+                        {review.text && (
+                          <p className="text-slate-600 leading-relaxed italic">
+                            "{review.text.length > 100 ? review.text.substring(0, 100) + '...' : review.text}"
+                          </p>
+                        )}
                       </li>
                     ))}
                   </ul>
