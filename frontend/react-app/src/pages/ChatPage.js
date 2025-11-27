@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { MessageSquare, Send, User, PauseCircle } from 'lucide-react';
+import { MessageSquare, Send, User, PauseCircle, ChevronDown, ChevronUp } from 'lucide-react';
 
 // const CHAT_ENDPOINT = '/api/rag/chat';
 const CHAT_ENDPOINT = '/api/v2/rag/chat';
@@ -51,11 +51,19 @@ const ChatPage = () => {
   ]);
   const [inputMessage, setInputMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [isPromptsExpanded, setIsPromptsExpanded] = useState(true);
+  const [hasUserSentMessage, setHasUserSentMessage] = useState(false);
   const abortControllerRef = useRef(null);
 
   const handleSendMessage = async () => {
     if (!inputMessage.trim()) return;
     if (isSending) return;
+
+    // 사용자가 첫 메시지를 보낼 때 프롬프트 박스 접기
+    if (!hasUserSentMessage) {
+      setHasUserSentMessage(true);
+      setIsPromptsExpanded(false);
+    }
 
     const userMessage = {
       id: messages.length + 1,
@@ -170,7 +178,8 @@ const ChatPage = () => {
 
       {/* Messages */}
       <div className="max-w-6xl mx-auto px-6 py-5">
-        <div className="bg-white rounded-lg border border-slate-200 p-6 min-h-[500px] max-h-[600px] overflow-y-auto space-y-4">
+        <div className="bg-white rounded-lg border border-slate-200 min-h-[500px] max-h-[600px] flex flex-col relative">
+          <div className="flex-1 overflow-y-auto p-6 space-y-4">
         {messages.map((message) => (
           <div
             key={message.id}
@@ -237,14 +246,41 @@ const ChatPage = () => {
             </div>
           </div>
         ))}
+          </div>
 
-        {/* Recommended Prompts */}
-        {messages.length === 1 && (
+          {/* Recommended Prompts */}
           <div
-            className="mt-6 p-5 rounded-lg border"
-            style={{ backgroundColor: '#E6F4F4', borderColor: '#B6E2E2' }}
+            className="absolute bottom-0 left-0 right-0 border-t border-slate-200 transition-all duration-300 ease-in-out z-10 rounded-b-lg overflow-hidden"
+            style={{ 
+              backgroundColor: '#E6F4F4', 
+              borderTopColor: '#B6E2E2',
+              maxHeight: isPromptsExpanded ? '500px' : '60px',
+            }}
           >
-            <p className="text-sm font-semibold mb-4 text-slate-700">추천 프롬프트</p>
+          <div 
+            className="flex items-center justify-between p-4 cursor-pointer"
+            onClick={() => setIsPromptsExpanded(!isPromptsExpanded)}
+          >
+            <p className="text-sm font-semibold text-slate-700">추천 프롬프트</p>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsPromptsExpanded(!isPromptsExpanded);
+              }}
+              className="p-1 rounded hover:bg-white/50 transition-colors"
+              aria-label={isPromptsExpanded ? '접기' : '펼치기'}
+            >
+              {isPromptsExpanded ? (
+                <ChevronDown className="w-5 h-5 text-slate-600" />
+              ) : (
+                <ChevronUp className="w-5 h-5 text-slate-600" />
+              )}
+            </button>
+          </div>
+          <div 
+            className="px-4 pb-4 transition-opacity duration-300"
+            style={{ opacity: isPromptsExpanded ? 1 : 0, pointerEvents: isPromptsExpanded ? 'auto' : 'none' }}
+          >
             <div className="grid grid-cols-2 gap-3">
               {quickQuestions.map((question, index) => (
                 <button
@@ -260,7 +296,7 @@ const ChatPage = () => {
               ))}
             </div>
           </div>
-        )}
+          </div>
         </div>
       </div>
 
