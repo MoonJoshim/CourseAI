@@ -314,7 +314,7 @@ def semantic_search_pinecone(query: str, candidates: Optional[List[Dict[str, Any
         top_k: 반환할 최대 결과 수
         
     Returns:
-        List[Dict]: metadata와 text를 포함한 검색 결과 리스트
+        List[Dict]: metadata, text를 포함한 검색 결과 리스트
         [
             {
                 "text": "문서 내용",
@@ -324,6 +324,9 @@ def semantic_search_pinecone(query: str, candidates: Optional[List[Dict[str, Any
         ]
     """
     try:
+        # 쿼리 임베딩 생성
+        query_embedding = embedding_model.encode([f"query: {query}"], normalize_embeddings=True)[0].tolist()
+        
         # Pinecone 필터 구성
         pinecone_filter = {}
         
@@ -342,24 +345,24 @@ def semantic_search_pinecone(query: str, candidates: Optional[List[Dict[str, Any
                 }
                 print(f"🔍 Pinecone 필터 적용: {len(course_names)}개 course_name")
         
-        # VectorStore에서 retriever 생성 (필터 포함)
-        search_kwargs = {"k": top_k}
+        # Pinecone 직접 쿼리
+        index = pc.Index(PINECONE_INDEX)
+        query_kwargs = {
+            "vector": query_embedding,
+            "top_k": top_k,
+            "include_metadata": True
+        }
         if pinecone_filter:
-            search_kwargs["filter"] = pinecone_filter
+            query_kwargs["filter"] = pinecone_filter
         
-        retriever = vectorstore.as_retriever(search_kwargs=search_kwargs)
-        
-        # 검색 실행 (embed_query가 자동으로 "query:" 프리픽스 추가)
-        # Note: embed_query 메서드가 이미 "query: {text}" 형식으로 처리하므로
-        # 원본 query를 그대로 전달하면 됨
-        docs = retriever.get_relevant_documents(query)
+        query_response = index.query(**query_kwargs)
         
         # 결과를 Dict 형태로 변환
         results = []
-        for doc in docs:
+        for match in query_response.matches:
             results.append({
-                "text": doc.page_content,
-                "metadata": doc.metadata
+                "text": match.metadata.get("text", ""),  # 리뷰 텍스트
+                "metadata": match.metadata
             })
         
         print(f"✅ Pinecone에서 {len(results)}개 강의평 발견")
@@ -660,16 +663,40 @@ def rag_chat():
             pinecone_results
         )
         
-        # Step 5: LLM 최종 응답 생성 (Gemini)
+        # Step 5: Pinecone 결과를 top_reviews 형식으로 변환
+        top_reviews = []
+        for result in pinecone_results[:5]:  # 상위 5개만
+            metadata = result.get("metadata", {})
+            review_text = result.get("text", "")  # 강의평 텍스트
+            review_rating = metadata.get("rating", None)
+            
+            # rating이 숫자면 float로 변환, 아니면 None
+            if review_rating is not None:
+                try:
+                    review_rating = float(review_rating)
+                except (ValueError, TypeError):
+                    review_rating = None
+            
+            review_item = {
+                "course_name": metadata.get("course_name", ""),
+                "professor": metadata.get("professor", ""),
+                "text": review_text,  # 강의평 텍스트
+                "rating": review_rating,  # 강의평의 rating
+            }
+            top_reviews.append(review_item)
+        
+        # Step 6: LLM 최종 응답 생성 (Gemini)
         final_answer = synthesize_answer_with_llm(
             user_query,
             merged_context,
             conversation_history
         )
         
-        # Step 6: 응답 반환
+        # Step 7: 응답 반환
         return jsonify({
             "answer": final_answer,
+            "top_reviews": top_reviews,
+            "provider": "rag-v2",
             "debug": {
                 "intent": intent.model_dump(),  # Pydantic BaseModel을 dict로 변환
                 "mongo_candidates": len(mongo_candidates) if mongo_candidates else 0,
