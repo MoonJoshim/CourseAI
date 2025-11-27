@@ -94,7 +94,16 @@ const DetailPage = ({ selectedCourse, mockCourses }) => {
         });
 
         if (!response.ok) {
-          throw new Error('강의평을 불러오지 못했습니다.');
+          throw new Error(`강의평을 불러오지 못했습니다. (${response.status})`);
+        }
+
+        const contentType = response.headers.get('content-type') || '';
+        if (!contentType.includes('application/json')) {
+          const text = await response.text();
+          if (text.trim().startsWith('<!')) {
+            throw new Error('서버 설정 오류: API 엔드포인트를 찾을 수 없습니다.');
+          }
+          throw new Error('예상하지 못한 응답 형식입니다.');
         }
 
         const data = await response.json();

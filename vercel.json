@@ -14,6 +14,14 @@
     {
       "source": "/api/rag/:path*",
       "destination": "http://34.56.30.245:5003/api/rag/:path*"
+    },
+    {
+      "source": "/api/search",
+      "destination": "http://34.56.30.245:5002/api/search"
+    },
+    {
+      "source": "/api/software-courses",
+      "destination": "http://34.56.30.245:5002/api/software-courses"
     }
   ]
 }
