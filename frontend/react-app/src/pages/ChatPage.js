@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { MessageSquare, Send, User, PauseCircle } from 'lucide-react';
+import { MessageSquare, Send, User, PauseCircle, ChevronDown, ChevronUp } from 'lucide-react';
 
 // const CHAT_ENDPOINT = '/api/rag/chat';
 const CHAT_ENDPOINT = '/api/v2/rag/chat';
@@ -10,7 +10,7 @@ const API_BASE =
   RAW_API_BASE.startsWith('http://')
     ? ''
     : RAW_API_BASE;
-const REQUEST_TIMEOUT = Number(process.env.REACT_APP_AI_API_TIMEOUT || 20000);
+const REQUEST_TIMEOUT = Number(process.env.REACT_APP_AI_API_TIMEOUT || 30000);
 const DEFAULT_TOP_K = Number(process.env.REACT_APP_AI_RAG_TOP_K || 5);
 
 const formatTimestamp = (date) =>
@@ -19,6 +19,25 @@ const formatTimestamp = (date) =>
     minute: '2-digit',
     second: '2-digit',
   }).format(date);
+
+// 마크다운 텍스트를 HTML로 변환 (간단한 버전)
+const renderMarkdown = (text) => {
+  if (!text) return '';
+  
+  // **텍스트** -> <strong>텍스트</strong>
+  let html = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  
+  // *텍스트* -> <em>텍스트</em> (이탤릭)
+  html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+  
+  // 줄바꿈 처리
+  html = html.split('\n').map((line, idx) => {
+    if (line.trim() === '') return '<br />';
+    return line;
+  }).join('\n');
+  
+  return html;
+};
 
 const ChatPage = () => {
   const [messages, setMessages] = useState([
@@ -32,11 +51,19 @@ const ChatPage = () => {
   ]);
   const [inputMessage, setInputMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [isPromptsExpanded, setIsPromptsExpanded] = useState(true);
+  const [hasUserSentMessage, setHasUserSentMessage] = useState(false);
   const abortControllerRef = useRef(null);
 
   const handleSendMessage = async () => {
     if (!inputMessage.trim()) return;
     if (isSending) return;
+
+    // 사용자가 첫 메시지를 보낼 때 프롬프트 박스 접기
+    if (!hasUserSentMessage) {
+      setHasUserSentMessage(true);
+      setIsPromptsExpanded(false);
+    }
 
     const userMessage = {
       id: messages.length + 1,
@@ -121,11 +148,11 @@ const ChatPage = () => {
   };
 
   const quickQuestions = [
-    '데이터베이스 강의 중 평점 높은 교수님은?',
+    '소프트웨어학과 전공 선택 과목 추천해줘',
     '팀플 없으면서 과제 적당한 강의 추천해줘',
     '웹 개발 배우기 좋은 강의는?',
     '알고리즘 강의 교수님별 차이점 알려줘',
-    '객체지향프로그래밍 어느 교수님이 좋아?',
+    '기계학습과 인공지능의 차이가 뭐야?',
     '성적 잘 주시는 교수님 추천',
   ];
 
@@ -151,7 +178,13 @@ const ChatPage = () => {
 
       {/* Messages */}
       <div className="max-w-6xl mx-auto px-6 py-5">
-        <div className="bg-white rounded-lg border border-slate-200 p-6 min-h-[500px] max-h-[600px] overflow-y-auto space-y-4">
+        <div className="bg-white rounded-lg border border-slate-200 min-h-[500px] max-h-[600px] flex flex-col relative">
+          <div 
+            className="flex-1 overflow-y-auto p-6 space-y-4"
+            style={{ 
+              paddingBottom: isPromptsExpanded ? '1.5rem' : '90px' 
+            }}
+          >
         {messages.map((message) => (
           <div
             key={message.id}
@@ -181,22 +214,30 @@ const ChatPage = () => {
                   : {}
               }
             >
-              <p
+              <div
                 className={`text-sm leading-relaxed ${
                   message.type === 'user' ? 'text-slate-900' : 'text-slate-800'
                 } whitespace-pre-line`}
-              >
-                {message.content}
-              </p>
+                dangerouslySetInnerHTML={{ __html: renderMarkdown(message.content) }}
+              />
               {message.metadata?.topReviews?.length ? (
-                <div className="mt-3 text-xs text-slate-500 space-y-1">
+                <div className="mt-10 text-xs text-slate-500 space-y-2">
                   <p className="font-medium text-slate-600">관련 강의평 근거</p>
-                  <ul className="list-disc pl-4 space-y-1">
+                  <ul className="list-none space-y-2">
                     {message.metadata.topReviews.map((review, idx) => (
-                      <li key={`${message.id}-review-${idx}`}>
-                        <span className="font-semibold">{review.course_name}</span>{' '}
-                        ({review.professor || '교수 정보 없음'}) – 평점 {review.rating ?? 'N/A'} /
-                        유사도 {review.similarity_score}
+                      <li key={`${message.id}-review-${idx}`} className="border-l-2 border-slate-300 pl-3">
+                        <div className="mb-1">
+                          <span className="font-semibold text-slate-700">{review.course_name}</span>
+                          {' '}({review.professor || '교수 정보 없음'})
+                          {review.rating && (
+                            <span className="ml-2 text-amber-600">★ {review.rating}</span>
+                          )}
+                        </div>
+                        {review.text && (
+                          <p className="text-slate-600 leading-relaxed italic">
+                            "{review.text.length > 100 ? review.text.substring(0, 100) + '...' : review.text}"
+                          </p>
+                        )}
                       </li>
                     ))}
                   </ul>
@@ -210,14 +251,41 @@ const ChatPage = () => {
             </div>
           </div>
         ))}
+          </div>
 
-        {/* Recommended Prompts */}
-        {messages.length === 1 && (
+          {/* Recommended Prompts */}
           <div
-            className="mt-6 p-5 rounded-lg border"
-            style={{ backgroundColor: '#E6F4F4', borderColor: '#B6E2E2' }}
+            className="absolute bottom-0 left-0 right-0 border-t border-slate-200 transition-all duration-300 ease-in-out z-10 rounded-b-lg overflow-hidden"
+            style={{ 
+              backgroundColor: '#E6F4F4', 
+              borderTopColor: '#B6E2E2',
+              maxHeight: isPromptsExpanded ? '500px' : '60px',
+            }}
           >
-            <p className="text-sm font-semibold mb-4 text-slate-700">추천 프롬프트</p>
+          <div 
+            className="flex items-center justify-between p-4 cursor-pointer"
+            onClick={() => setIsPromptsExpanded(!isPromptsExpanded)}
+          >
+            <p className="text-sm font-semibold text-slate-700">추천 프롬프트</p>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsPromptsExpanded(!isPromptsExpanded);
+              }}
+              className="p-1 rounded hover:bg-white/50 transition-colors"
+              aria-label={isPromptsExpanded ? '접기' : '펼치기'}
+            >
+              {isPromptsExpanded ? (
+                <ChevronDown className="w-5 h-5 text-slate-600" />
+              ) : (
+                <ChevronUp className="w-5 h-5 text-slate-600" />
+              )}
+            </button>
+          </div>
+          <div 
+            className="px-4 pb-4 transition-opacity duration-300"
+            style={{ opacity: isPromptsExpanded ? 1 : 0, pointerEvents: isPromptsExpanded ? 'auto' : 'none' }}
+          >
             <div className="grid grid-cols-2 gap-3">
               {quickQuestions.map((question, index) => (
                 <button
@@ -233,7 +301,7 @@ const ChatPage = () => {
               ))}
             </div>
           </div>
-        )}
+          </div>
         </div>
       </div>
 
