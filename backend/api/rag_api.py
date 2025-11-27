@@ -68,14 +68,24 @@ class SentenceTransformerEmbeddings(Embeddings):
         return embedding[0].tolist()
 
 # ───────────────────────────────────────────────
-# LangChain Pinecone VectorStore
+# VectorStore 초기화 함수
 # ───────────────────────────────────────────────
-embeddings = SentenceTransformerEmbeddings(embedding_model)
+def init_vectorstore() -> PineconeVectorStore:
+    """
+    Pinecone VectorStore 초기화
+    upsert와 동일한 구조로 생성
+    """
+    embeddings = SentenceTransformerEmbeddings(embedding_model)
+    vectorstore = PineconeVectorStore(
+        index_name=PINECONE_INDEX,
+        embedding=embeddings
+    )
+    return vectorstore
 
-vectorstore = PineconeVectorStore(
-    index_name=PINECONE_INDEX,
-    embedding=embeddings  # Embeddings 클래스 인스턴스
-)
+# ───────────────────────────────────────────────
+# LangChain Pinecone VectorStore (전역 인스턴스)
+# ───────────────────────────────────────────────
+vectorstore = init_vectorstore()
 
 # ───────────────────────────────────────────────
 # Gemini LLM 호출
@@ -116,10 +126,51 @@ def filter_from_mongodb(filters: Dict[str, Any]) -> Optional[List[Dict[str, Any]
     # TODO: 구현 필요
     return None
 
-def semantic_search_pinecone(query: str, candidates: Optional[List[Dict[str, Any]]] = None) -> List[Dict[str, Any]]:
-    """Pinecone 의미 기반 검색"""
-    # TODO: 구현 필요
-    return []
+def semantic_search_pinecone(query: str, candidates: Optional[List[Dict[str, Any]]] = None, top_k: int = 5) -> List[Dict[str, Any]]:
+    """
+    Pinecone 의미 기반 검색
+    
+    Args:
+        query: 검색할 쿼리 텍스트
+        candidates: MongoDB 후보 목록 (현재 미사용, 향후 필터링에 사용 예정)
+        top_k: 반환할 최대 결과 수
+        
+    Returns:
+        List[Dict]: metadata와 text를 포함한 검색 결과 리스트
+        [
+            {
+                "text": "문서 내용",
+                "metadata": {...}
+            },
+            ...
+        ]
+    """
+    try:
+        # VectorStore에서 retriever 생성
+        retriever = vectorstore.as_retriever(search_kwargs={"k": top_k})
+        
+        # 검색 실행 (embed_query가 자동으로 "query:" 프리픽스 추가)
+        # Note: embed_query 메서드가 이미 "query: {text}" 형식으로 처리하므로
+        # 원본 query를 그대로 전달하면 됨
+        docs = retriever.get_relevant_documents(query)
+        
+        # 결과를 Dict 형태로 변환
+        results = []
+        for doc in docs:
+            results.append({
+                "text": doc.page_content,
+                "metadata": doc.metadata
+            })
+        
+        # TODO: candidates를 사용한 필터링 로직 추가 예정 (MongoDB 통합 시)
+        
+        return results
+        
+    except Exception as e:
+        print(f"❌ Pinecone 검색 오류: {e}")
+        import traceback
+        traceback.print_exc()
+        return []
 
 def merge_results(mongo_candidates: Optional[List[Dict[str, Any]]], pinecone_results: List[Dict[str, Any]]) -> Dict[str, Any]:
     """두 결과를 merge → 강의 정보 + 리뷰 정보 통합"""
@@ -137,7 +188,28 @@ def synthesize_answer_with_llm(user_query: str, merged_context: Dict[str, Any]) 
 # ───────────────────────────────────────────────
 # RAG Chat API 엔드포인트
 # ───────────────────────────────────────────────
-@app.route("/api/rag/chat", methods=["POST"])
+# 
+# 요청 예시:
+# POST /api/v2/rag/chat
+# Content-Type: application/json
+# {
+#   "query": "데이터베이스 강의 추천해줘"
+# }
+#
+# 응답 예시 (성공):
+# {
+#   "answer": "답변 생성 중...",
+#   "debug": {
+#     "intent": {
+#       "needs_structured_filter": false,
+#       "filters": {},
+#       "semantic_query": "데이터베이스 강의 추천해줘"
+#     },
+#     "mongo_candidates": 0,
+#     "pinecone_hits": 0
+#   }
+# }
+@app.route("/api/v2/rag/chat", methods=["POST"])
 def rag_chat():
     """RAG 기반 챗봇 API"""
     try:
