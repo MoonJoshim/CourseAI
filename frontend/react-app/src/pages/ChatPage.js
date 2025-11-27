@@ -20,6 +20,25 @@ const formatTimestamp = (date) =>
     second: '2-digit',
   }).format(date);
 
+// 마크다운 텍스트를 HTML로 변환 (간단한 버전)
+const renderMarkdown = (text) => {
+  if (!text) return '';
+  
+  // **텍스트** -> <strong>텍스트</strong>
+  let html = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  
+  // *텍스트* -> <em>텍스트</em> (이탤릭)
+  html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+  
+  // 줄바꿈 처리
+  html = html.split('\n').map((line, idx) => {
+    if (line.trim() === '') return '<br />';
+    return line;
+  }).join('\n');
+  
+  return html;
+};
+
 const ChatPage = () => {
   const [messages, setMessages] = useState([
     {
@@ -181,13 +200,12 @@ const ChatPage = () => {
                   : {}
               }
             >
-              <p
+              <div
                 className={`text-sm leading-relaxed ${
                   message.type === 'user' ? 'text-slate-900' : 'text-slate-800'
                 } whitespace-pre-line`}
-              >
-                {message.content}
-              </p>
+                dangerouslySetInnerHTML={{ __html: renderMarkdown(message.content) }}
+              />
               {message.metadata?.topReviews?.length ? (
                 <div className="mt-3 text-xs text-slate-500 space-y-1">
                   <p className="font-medium text-slate-600">관련 강의평 근거</p>
