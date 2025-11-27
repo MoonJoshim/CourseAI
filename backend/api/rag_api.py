@@ -115,6 +115,13 @@ class QueryIntent(BaseModel):
     needs_structured_filter: bool
     filters: Dict[str, Any]
     semantic_query: str
+    comparison_targets: Optional[Dict[str, Any]] = None  # 비교 대상 정보
+    # comparison_targets 구조:
+    # {
+    #   "course_names": List[str],  # 비교 대상 강의명 리스트
+    #   "professors": List[str],     # 비교 대상 교수명 리스트
+    #   "comparison_type": str       # "course" | "professor" | "both" | None
+    # }
 
 # ───────────────────────────────────────────────
 # Helper 함수들
@@ -163,13 +170,32 @@ def classify_query_intent(user_query: str) -> QueryIntent:
    - 예: "과제 별로 없는 강의 추천해줘" → "과제 별로 없는 강의 추천해줘" (구조적 필터 없음, 원본 그대로)
    - 예: "내 개발 실력에 진짜 도움되는 강의 있을까?" → "내 개발 실력에 진짜 도움되는 강의 있을까?" (구조적 필터 없음, 원본 그대로)
 
+4. 비교 대상 추출 (comparison_targets):
+   - 질문에서 비교하고 있는 강의명과 교수명을 추출
+   - 비교 타입 판단:
+     * "course": 여러 강의를 비교하는 경우 (예: "기계학습과 인공지능의 차이")
+     * "professor": 한 강의의 여러 교수를 비교하는 경우 (예: "알고리즘 강의 교수님별 차이점")
+     * "both": 여러 강의의 여러 교수를 비교하는 경우
+     * null: 비교 질의가 아닌 경우
+   - course_names: 비교 대상 강의명 리스트 (없으면 빈 배열 [])
+   - professors: 비교 대상 교수명 리스트 (없으면 빈 배열 [])
+   - 예: "알고리즘 강의 교수님별 차이점 알려줘" → {{"course_names": ["알고리즘"], "professors": [], "comparison_type": "professor"}}
+   - 예: "기계학습과 인공지능의 차이가 뭐야?" → {{"course_names": ["기계학습", "인공지능"], "professors": [], "comparison_type": "course"}}
+   - 예: "객체지향프로그래밍 어느 교수님이 좋아?" → {{"course_names": ["객체지향프로그래밍"], "professors": [], "comparison_type": "professor"}}
+   - 예: "데이터베이스에 대해 배울 수 있는 강의 추천해줘" → {{"course_names": [], "professors": [], "comparison_type": null}}
+
 사용자 질문: "{user_query}"
 
 반드시 다음 JSON 형식으로만 응답하세요 (추가 설명 없이):
 {{
     "needs_structured_filter": true/false,
     "filters": {{}},
-    "semantic_query": "정제된 질문"
+    "semantic_query": "정제된 질문",
+    "comparison_targets": {{
+        "course_names": [],
+        "professors": [],
+        "comparison_type": null
+    }}
 }}"""
 
         # Gemini 모델 호출
@@ -187,10 +213,19 @@ def classify_query_intent(user_query: str) -> QueryIntent:
         intent_data = json.loads(response_text)
         
         # QueryIntent 객체 생성
+        comparison_targets = intent_data.get("comparison_targets")
+        if comparison_targets is None:
+            comparison_targets = {
+                "course_names": [],
+                "professors": [],
+                "comparison_type": None
+            }
+        
         return QueryIntent(
             needs_structured_filter=intent_data.get("needs_structured_filter", False),
             filters=intent_data.get("filters", {}),
-            semantic_query=intent_data.get("semantic_query", user_query)
+            semantic_query=intent_data.get("semantic_query", user_query),
+            comparison_targets=comparison_targets
         )
         
     except json.JSONDecodeError as e:
@@ -200,7 +235,12 @@ def classify_query_intent(user_query: str) -> QueryIntent:
         return QueryIntent(
             needs_structured_filter=False,
             filters={},
-            semantic_query=user_query
+            semantic_query=user_query,
+            comparison_targets={
+                "course_names": [],
+                "professors": [],
+                "comparison_type": None
+            }
         )
     except Exception as e:
         print(f"❌ 질문 의도 분석 오류: {e}")
@@ -210,7 +250,12 @@ def classify_query_intent(user_query: str) -> QueryIntent:
         return QueryIntent(
             needs_structured_filter=False,
             filters={},
-            semantic_query=user_query
+            semantic_query=user_query,
+            comparison_targets={
+                "course_names": [],
+                "professors": [],
+                "comparison_type": None
+            }
         )
 
 def filter_from_mongodb(filters: Dict[str, Any]) -> Optional[List[Dict[str, Any]]]:
@@ -304,15 +349,16 @@ def filter_from_mongodb(filters: Dict[str, Any]) -> Optional[List[Dict[str, Any]
         traceback.print_exc()
         return None
 
-def semantic_search_pinecone(query: str, candidates: Optional[List[Dict[str, Any]]] = None, top_k: int = 5) -> List[Dict[str, Any]]:
+def semantic_search_pinecone(query: str, candidates: Optional[List[Dict[str, Any]]] = None, top_k: int = 5, comparison_targets: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
     """
-    Pinecone 의미 기반 검색 (metadata 필터 지원)
+    Pinecone 의미 기반 검색 (metadata 필터 지원, 비교 대상 보장)
     
     Args:
         query: 검색할 쿼리 텍스트
         candidates: MongoDB 후보 목록 (course_name 리스트로 변환하여 필터링에 사용)
         top_k: 반환할 최대 결과 수
-        
+        comparison_targets: 비교 대상 정보 (course_names, professors, comparison_type)
+    
     Returns:
         List[Dict]: metadata, text를 포함한 검색 결과 리스트
         [
@@ -327,29 +373,135 @@ def semantic_search_pinecone(query: str, candidates: Optional[List[Dict[str, Any
         # 쿼리 임베딩 생성
         query_embedding = embedding_model.encode([f"query: {query}"], normalize_embeddings=True)[0].tolist()
         
-        # Pinecone 필터 구성
+        index = pc.Index(PINECONE_INDEX)
+        
+        # 비교 대상 보장 검색 결과
+        guaranteed_results = []
+        guaranteed_keys = set()  # 중복 제거용: (course_name, professor) 튜플
+        
+        if comparison_targets:
+            course_names = comparison_targets.get("course_names", [])
+            professors = comparison_targets.get("professors", [])
+            comparison_type = comparison_targets.get("comparison_type")
+            
+            if comparison_type in ["course", "professor", "both"]:
+                print(f"🔍 비교 대상 보장 검색: course_names={course_names}, professors={professors}, type={comparison_type}")
+                
+                # 각 강의명별로 최소 1개씩 검색
+                for course_name in course_names:
+                    if not course_name:
+                        continue
+                    
+                    course_filter = {"course_name": {"$eq": course_name}}
+                    try:
+                        course_response = index.query(
+                            vector=query_embedding,
+                            top_k=1,
+                            include_metadata=True,
+                            filter=course_filter
+                        )
+                        
+                        for match in course_response.matches:
+                            meta = match.metadata
+                            key = (meta.get("course_name", ""), meta.get("professor", ""))
+                            if key not in guaranteed_keys:
+                                guaranteed_results.append({
+                                    "text": meta.get("text", ""),
+                                    "metadata": meta
+                                })
+                                guaranteed_keys.add(key)
+                    except Exception as e:
+                        print(f"⚠️ 강의명 '{course_name}' 검색 오류: {e}")
+                
+                # 각 교수명별로 최소 1개씩 검색 (교수 비교인 경우)
+                if comparison_type in ["professor", "both"]:
+                    for professor in professors:
+                        if not professor:
+                            continue
+                        
+                        professor_filter = {"professor": {"$eq": professor}}
+                        try:
+                            professor_response = index.query(
+                                vector=query_embedding,
+                                top_k=1,
+                                include_metadata=True,
+                                filter=professor_filter
+                            )
+                            
+                            for match in professor_response.matches:
+                                meta = match.metadata
+                                key = (meta.get("course_name", ""), meta.get("professor", ""))
+                                if key not in guaranteed_keys:
+                                    guaranteed_results.append({
+                                        "text": meta.get("text", ""),
+                                        "metadata": meta
+                                    })
+                                    guaranteed_keys.add(key)
+                        except Exception as e:
+                            print(f"⚠️ 교수명 '{professor}' 검색 오류: {e}")
+                    
+                    # 강의+교수 조합별로 최소 1개씩 검색 (교수 비교인 경우)
+                    if course_names and not professors:
+                        # course_names는 있지만 professors가 없는 경우, 해당 강의의 모든 교수에 대해 검색
+                        for course_name in course_names:
+                            if not course_name:
+                                continue
+                            
+                            # 해당 강의의 교수들을 찾기 위해 먼저 검색
+                            course_filter = {"course_name": {"$eq": course_name}}
+                            try:
+                                course_response = index.query(
+                                    vector=query_embedding,
+                                    top_k=10,  # 여러 교수 찾기 위해 더 많이 가져옴
+                                    include_metadata=True,
+                                    filter=course_filter
+                                )
+                                
+                                # 교수별로 그룹화하여 각 교수당 최소 1개씩
+                                professors_found = {}
+                                for match in course_response.matches:
+                                    meta = match.metadata
+                                    prof_name = meta.get("professor", "")
+                                    if prof_name and prof_name not in professors_found:
+                                        key = (meta.get("course_name", ""), prof_name)
+                                        if key not in guaranteed_keys:
+                                            professors_found[prof_name] = {
+                                                "text": meta.get("text", ""),
+                                                "metadata": meta
+                                            }
+                                            guaranteed_keys.add(key)
+                                
+                                for prof_result in professors_found.values():
+                                    guaranteed_results.append(prof_result)
+                            except Exception as e:
+                                print(f"⚠️ 강의 '{course_name}' 교수별 검색 오류: {e}")
+        
+        # 일반 의미 기반 검색 (보장된 결과와 병합)
         pinecone_filter = {}
         
         if candidates:
             # candidates에서 course_name 리스트 추출
-            course_names = []
+            candidate_course_names = []
             for candidate in candidates:
                 course_name = candidate.get("course_name", "")
                 if course_name:
-                    course_names.append(course_name)
+                    candidate_course_names.append(course_name)
             
-            if course_names:
+            if candidate_course_names:
                 # Pinecone metadata 필터: course_name이 candidates 중 하나와 일치
                 pinecone_filter = {
-                    "course_name": {"$in": course_names}
+                    "course_name": {"$in": candidate_course_names}
                 }
-                print(f"🔍 Pinecone 필터 적용: {len(course_names)}개 course_name")
+                print(f"🔍 Pinecone 필터 적용: {len(candidate_course_names)}개 course_name")
         
-        # Pinecone 직접 쿼리
-        index = pc.Index(PINECONE_INDEX)
+        # 일반 검색 실행 (보장된 결과 제외)
+        remaining_k = max(1, top_k - len(guaranteed_results))
+        # 비교 대상이 있을 때만 중복 제거를 위해 더 많이 가져옴
+        has_comparison = comparison_targets and comparison_targets.get("comparison_type") in ["course", "professor", "both"]
+        query_top_k = remaining_k * 2 if has_comparison else remaining_k
         query_kwargs = {
             "vector": query_embedding,
-            "top_k": top_k,
+            "top_k": query_top_k,
             "include_metadata": True
         }
         if pinecone_filter:
@@ -357,16 +509,24 @@ def semantic_search_pinecone(query: str, candidates: Optional[List[Dict[str, Any
         
         query_response = index.query(**query_kwargs)
         
-        # 결과를 Dict 형태로 변환
-        results = []
+        # 일반 검색 결과 추가 (중복 제거)
+        semantic_results = []
         for match in query_response.matches:
-            results.append({
-                "text": match.metadata.get("text", ""),  # 리뷰 텍스트
-                "metadata": match.metadata
-            })
+            meta = match.metadata
+            key = (meta.get("course_name", ""), meta.get("professor", ""))
+            if key not in guaranteed_keys:
+                semantic_results.append({
+                    "text": meta.get("text", ""),
+                    "metadata": meta
+                })
+                guaranteed_keys.add(key)
         
-        print(f"✅ Pinecone에서 {len(results)}개 강의평 발견")
-        return results
+        # 보장된 결과 + 일반 검색 결과 병합 (최대 top_k개)
+        all_results = guaranteed_results + semantic_results
+        final_results = all_results[:top_k]
+        
+        print(f"✅ Pinecone에서 {len(final_results)}개 강의평 발견 (보장: {len(guaranteed_results)}, 일반: {len(semantic_results)})")
+        return final_results
         
     except Exception as e:
         print(f"❌ Pinecone 검색 오류: {e}")
@@ -656,10 +816,12 @@ def rag_chat():
         else:
             mongo_candidates = None
         
-        # Step 3: Pinecone 의미 기반 검색
+        # Step 3: Pinecone 의미 기반 검색 (비교 대상 보장)
+        comparison_targets = intent.comparison_targets
         pinecone_results = semantic_search_pinecone(
             query=intent.semantic_query,
-            candidates=mongo_candidates
+            candidates=mongo_candidates,
+            comparison_targets=comparison_targets
         )
         
         # Step 4: 두 결과를 merge → 강의 정보 + 리뷰 정보 통합
