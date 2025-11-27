@@ -1604,6 +1604,100 @@ if __name__ == '__main__':
         app.run(debug=True, host='0.0.0.0', port=5002)
     finally:
         cleanup_driver()
+@app.route('/api/reviews/from-pinecone', methods=['GET'])
+def get_reviews_from_pinecone():
+    """Pinecone에서 특정 강의의 강의평 목록 가져오기"""
+    try:
+        from pinecone import Pinecone
+        
+        course_name = request.args.get('course_name', '').strip()
+        professor = request.args.get('professor', '').strip()
+        limit = int(request.args.get('limit', 100))
+        
+        if not course_name:
+            return jsonify({
+                'success': False,
+                'error': 'course_name 파라미터가 필요합니다.'
+            }), 400
+        
+        PINECONE_API_KEY = os.getenv('PINECONE_API_KEY')
+        PINECONE_INDEX = os.getenv('PINECONE_INDEX', 'courses-dev')
+        
+        if not PINECONE_API_KEY:
+            return jsonify({'success': False, 'error': 'PINECONE_API_KEY not set'}), 500
+        
+        pc = Pinecone(api_key=PINECONE_API_KEY)
+        index = pc.Index(PINECONE_INDEX)
+        
+        # 모든 강의평 벡터 가져오기
+        results = index.query(
+            vector=[0.0] * 768,
+            top_k=10000,
+            include_metadata=True
+        )
+        
+        # 강의평 목록 생성 및 필터링
+        reviews = []
+        normalized_course_name = course_name.strip().lower()
+        normalized_professor = professor.strip().lower() if professor else None
+        
+        for match in results.matches:
+            meta = match.metadata
+            if not meta:
+                continue
+            
+            # 강의명 필터링 (대소문자 무시)
+            meta_course_name = meta.get('course_name', '').strip()
+            if not meta_course_name or meta_course_name.lower() != normalized_course_name:
+                continue
+            
+            # 교수명 필터링 (제공된 경우, 대소문자 무시)
+            if normalized_professor:
+                meta_professor = meta.get('professor', '').strip()
+                if not meta_professor or meta_professor.lower() != normalized_professor:
+                    continue
+            
+            review_data = {
+                'review_id': match.id,
+                'rating': float(meta.get('rating', 0)),
+                'comment': meta.get('text', ''),
+                'text': meta.get('text', ''),
+                'semester': meta.get('semester', ''),
+                'course_name': meta.get('course_name', ''),
+                'professor': meta.get('professor', ''),
+                'department': meta.get('department', ''),
+                'source': meta.get('source', 'pinecone'),
+                'created_at': meta.get('uploaded_at', ''),
+                'year': meta.get('year', None)
+            }
+            reviews.append(review_data)
+        
+        # 최신순 정렬 (semester와 uploaded_at 기준)
+        reviews.sort(key=lambda x: (
+            x.get('year', 0) or 0,
+            x.get('semester', ''),
+            x.get('created_at', '')
+        ), reverse=True)
+        
+        # limit 적용
+        reviews = reviews[:limit]
+        
+        return jsonify({
+            'success': True,
+            'reviews': reviews,
+            'total': len(reviews),
+            'course_name': course_name,
+            'professor': professor or None
+        })
+        
+    except Exception as e:
+        import traceback
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }), 500
+
 @app.route('/api/courses/from-pinecone', methods=['GET'])
 def get_courses_from_pinecone():
     """Pinecone에서 강의 목록 가져오기 (강의평 기반으로 요약)"""

@@ -38,8 +38,6 @@ const buildApiPath = (path = '') => {
   return base ? `${base}${path}` : path;
 };
 
-const normalizeKey = (value = '') => value.replace(/\s+/g, '').toLowerCase();
-
 const sortReviewsByRecency = (reviews = []) =>
   [...reviews].sort((a = {}, b = {}) => {
     const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
@@ -83,13 +81,17 @@ const DetailPage = ({ selectedCourse, mockCourses }) => {
       }));
 
       try {
+        // Pinecone에서 직접 강의평 가져오기
         const params = new URLSearchParams({
-          keyword: course.name,
-          limit: '50',
-          offset: '0',
+          course_name: course.name,
+          limit: '100',
         });
+        
+        if (course.professor) {
+          params.append('professor', course.professor);
+        }
 
-        const response = await fetch(buildApiPath(`/api/search?${params.toString()}`), {
+        const response = await fetch(buildApiPath(`/api/reviews/from-pinecone?${params.toString()}`), {
           signal: controller.signal,
         });
 
@@ -107,20 +109,12 @@ const DetailPage = ({ selectedCourse, mockCourses }) => {
         }
 
         const data = await response.json();
-        const results = Array.isArray(data.results) ? data.results : [];
-        const normalizedName = normalizeKey(course.name);
-        const normalizedProfessor = normalizeKey(course.professor);
+        
+        if (!data.success) {
+          throw new Error(data.error || '강의평을 불러오는 중 오류가 발생했습니다.');
+        }
 
-        const matched =
-          results.find(
-            (item) =>
-              normalizeKey(item.course_name) === normalizedName &&
-              (!normalizedProfessor || normalizeKey(item.professor) === normalizedProfessor)
-          ) ||
-          results.find((item) => normalizeKey(item.course_name) === normalizedName) ||
-          null;
-
-        const matchedReviews = matched?.reviews ? sortReviewsByRecency(matched.reviews) : [];
+        const matchedReviews = Array.isArray(data.reviews) ? sortReviewsByRecency(data.reviews) : [];
 
         if (!isMounted) {
           return;
@@ -128,7 +122,7 @@ const DetailPage = ({ selectedCourse, mockCourses }) => {
 
         setRemoteReviews({
           items: matchedReviews,
-          total: matched?.total_reviews ?? matchedReviews.length,
+          total: data.total ?? matchedReviews.length,
           isLoading: false,
           error: null,
         });

@@ -11,6 +11,10 @@
     {
       "source": "/api/software-courses",
       "destination": "http://34.56.30.245:5002/api/software-courses"
+    },
+    {
+      "source": "/api/reviews/from-pinecone",
+      "destination": "http://34.56.30.245:5002/api/reviews/from-pinecone"
     }
   ]
 }
