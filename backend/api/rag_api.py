@@ -145,7 +145,7 @@ def classify_query_intent(user_query: str) -> QueryIntent:
 
 2. MongoDB 필터 (filters):
    - 구조적 필터가 필요한 경우, 추출 가능한 필드들을 key-value 형태로 제공
-   - 가능한 필드: course_name, professor, department, semester, credits, lecture_time, lecture_method, course_type, subject_type
+   - 가능한 필드: course_name, professor, department, target_grade, semester, credits, lecture_time, lecture_method, course_type, subject_type
    - department는 "소프트웨어학과"밖에 올 수 없고, course_type는 "전필", "전선"밖에 올 수 없음. lecture_time는 "월", "화", "수", "목", "금"밖에 올 수 없음.
    - 예: {{"course_name": "데이터베이스"}}, {{"department": "소프트웨어학과", "course_type": "전선"}}
    - 구조적 필터가 불필요하면 빈 객체 {{}} 반환
@@ -508,13 +508,14 @@ def normalize_context(merged_context: Dict[str, Any]) -> Dict[str, Any]:
     
     return normalized
 
-def synthesize_answer_with_llm(user_query: str, merged_context: Dict[str, Any]) -> str:
+def synthesize_answer_with_llm(user_query: str, merged_context: Dict[str, Any], conversation_history: list = None) -> str:
     """
     LLM 최종 응답 생성 (Gemini)
     
     Args:
         user_query: 사용자 질문
         merged_context: merge_results()의 출력
+        conversation_history: 대화 히스토리 (선택적)
         
     Returns:
         str: Gemini가 생성한 최종 답변
@@ -523,22 +524,33 @@ def synthesize_answer_with_llm(user_query: str, merged_context: Dict[str, Any]) 
         # 컨텍스트 정규화
         normalized_context = normalize_context(merged_context)
         
+        # 대화 히스토리 텍스트 생성 (최근 5개만)
+        history_text = ""
+        if conversation_history:
+            history_items = []
+            for hist in conversation_history[-5:]:
+                user_msg = hist.get("user", "").strip()
+                assistant_msg = hist.get("assistant", "").strip()
+                if user_msg and assistant_msg:
+                    history_items.append(f"사용자: {user_msg}\n어시스턴트: {assistant_msg}")
+            if history_items:
+                history_text = "\n\n이전 대화(있으면):\n" + "\n\n".join(history_items) + "\n"
+        
         # 프롬프트 구성
-        prompt = f"""사용자 질문:
+        prompt = f"""{history_text}사용자 질문:
 {user_query}
 
 아래는 데이터베이스에서 검색된 강의 정보 및 강의평 리뷰 데이터입니다.
 이 정보를 기반으로 사용자에게 적절한 답변을 생성하세요.
 
 요구사항:
-1) 사용자의 질문 의도에 맞는 추천 또는 조언 제시
-2) 강의 특징 요약
-3) 교수님의 강의 스타일/특징 요약
+1) 사용자의 질문 의도에 맞는 추천 또는 조언 제시가 가장 중요합니다.
+2) 필요한 경우 강의 특징 요약 또는 교수님의 강의 스타일/특징 요약
 4) 필요한 경우 강의평을 기반으로 장점/단점 정리
-5) 여러 강의가 있을 경우 정확도 높은 순서대로 최대 5개까지 비교 후 안내
-6) 존재하지 않는 정보는 절대 생성하지 말 것
+5) 여러 강의가 있을 경우 정확도 높은 순서대로 최대 3개까지 비교 후 안내
+6) 정보가 존재하지 않으면 절대 거짓 생성하지 말고, 사실대로 존재하지 않는다고 말할 것
 7) JSON이 아니라 자연스러운 한국어 문장으로 답변 생성
-8) 강의평에 과도하게 비난적인 내용이나 부정적인 내용은 언급하지 말 것 (교수님이 볼 수도 있다고 생각하기)
+8) 강의평에 과도하게 비난적인 내용이나 부정적인 내용은 배제하거나 순화해서 말할 것
 
 강의 데이터(JSON):
 {json.dumps(normalized_context, ensure_ascii=False, indent=2)}"""
@@ -594,7 +606,13 @@ def synthesize_answer_with_llm(user_query: str, merged_context: Dict[str, Any]) 
 # POST /api/v2/rag/chat
 # Content-Type: application/json
 # {
-#   "query": "데이터베이스 강의 추천해줘"
+#   "query": "데이터베이스 강의 추천해줘",
+#   "history": [
+#     {
+#       "user": "알고리즘 강의 추천해줘",
+#       "assistant": "알고리즘 강의로는..."
+#     }
+#   ]
 # }
 #
 # 응답 예시 (성공):
@@ -616,6 +634,7 @@ def rag_chat():
     try:
         body = request.get_json()
         user_query = body.get("query", "").strip()
+        conversation_history = body.get("history", [])  # 대화 히스토리 (선택적)
         
         if not user_query:
             return jsonify({"error": "query 파라미터가 필요합니다."}), 400
@@ -644,7 +663,8 @@ def rag_chat():
         # Step 5: LLM 최종 응답 생성 (Gemini)
         final_answer = synthesize_answer_with_llm(
             user_query,
-            merged_context
+            merged_context,
+            conversation_history
         )
         
         # Step 6: 응답 반환
