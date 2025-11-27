@@ -1717,6 +1717,150 @@ def get_reviews_from_pinecone():
             'traceback': traceback.format_exc()
         }), 500
 
+@app.route('/api/reviews/summary', methods=['GET'])
+def get_reviews_summary():
+    """강의평을 기반으로 AI 요약 생성 (강의 특징, 교수 스타일, 장단점)"""
+    try:
+        from pinecone import Pinecone
+        import google.generativeai as genai
+        
+        course_name = request.args.get('course_name', '').strip()
+        professor = request.args.get('professor', '').strip()
+        
+        print(f"📝 강의평 요약 생성 요청: course_name='{course_name}', professor='{professor}'")
+        
+        if not course_name:
+            return jsonify({
+                'success': False,
+                'error': 'course_name 파라미터가 필요합니다.'
+            }), 400
+        
+        # Pinecone에서 강의평 가져오기
+        PINECONE_API_KEY = os.getenv('PINECONE_API_KEY')
+        PINECONE_INDEX = os.getenv('PINECONE_INDEX', 'courses-dev')
+        
+        if not PINECONE_API_KEY:
+            return jsonify({'success': False, 'error': 'PINECONE_API_KEY not set'}), 500
+        
+        pc = Pinecone(api_key=PINECONE_API_KEY)
+        index = pc.Index(PINECONE_INDEX)
+        
+        # 강의평 조회
+        results = index.query(
+            vector=[0.0] * 768,
+            top_k=10000,
+            include_metadata=True
+        )
+        
+        # 필터링
+        reviews = []
+        normalized_course_name = course_name.strip().lower()
+        normalized_professor = professor.strip().lower() if professor else None
+        
+        for match in results.matches:
+            meta = match.metadata
+            if not meta:
+                continue
+            
+            meta_course_name = meta.get('course_name', '').strip()
+            if not meta_course_name:
+                continue
+            
+            meta_course_name_lower = meta_course_name.lower()
+            if (meta_course_name_lower != normalized_course_name and 
+                normalized_course_name not in meta_course_name_lower and
+                meta_course_name_lower not in normalized_course_name):
+                continue
+            
+            if normalized_professor:
+                meta_professor = meta.get('professor', '').strip()
+                if not meta_professor:
+                    continue
+                meta_professor_lower = meta_professor.lower()
+                if (meta_professor_lower != normalized_professor and
+                    normalized_professor not in meta_professor_lower and
+                    meta_professor_lower not in normalized_professor):
+                    continue
+            
+            review_text = meta.get('text', '').strip()
+            if review_text:
+                reviews.append(review_text)
+        
+        if not reviews:
+            return jsonify({
+                'success': True,
+                'summary': '강의평 데이터가 없어 요약을 생성할 수 없습니다.',
+                'course_name': course_name,
+                'professor': professor or None
+            })
+        
+        # AI 요약 생성
+        GEMINI_API_KEY = os.getenv('GEMINI_API_KEY') or os.getenv('GOOGLE_GEMINI_API_KEY')
+        if not GEMINI_API_KEY:
+            return jsonify({'success': False, 'error': 'GEMINI_API_KEY not set'}), 500
+        
+        genai.configure(api_key=GEMINI_API_KEY)
+        
+        # 최대 20개 강의평만 사용 (토큰 제한 고려)
+        review_texts = reviews[:20]
+        reviews_text = '\n\n'.join([f"강의평 {i+1}: {text}" for i, text in enumerate(review_texts)])
+        
+        prompt = f"""다음은 "{course_name}" 강의의 실제 수강생 강의평입니다. {"교수님은 " + professor + "입니다." if professor else ""}
+
+강의평 목록:
+{reviews_text}
+
+위 강의평들을 바탕으로 다음 형식으로 자연스러운 한국어 문장으로 요약해주세요:
+
+1. 강의 특징 요약
+(강의의 주요 특징, 수업 방식, 커리큘럼 등을 요약)
+
+2. 교수님의 강의 스타일/특징 요약
+(교수님의 강의 방식, 설명 스타일, 학생 대응 등을 요약)
+
+3. 장점/단점 정리
+(강의평에서 언급된 장점과 단점을 정리)
+
+중요한 주의사항:
+- 존재하지 않는 정보는 절대 생성하지 마세요. 강의평에 없는 내용은 작성하지 마세요.
+- JSON 형식이 아닌 자연스러운 한국어 문장으로 작성해주세요.
+- 비난적이거나 부정적인 표현은 객관적이고 건설적인 표현으로 바꿔서 작성해주세요.
+- 각 섹션은 명확하게 구분되어야 합니다.
+
+요약:"""
+        
+        try:
+            model = genai.GenerativeModel('gemini-2.0-flash-exp')
+            response = model.generate_content(prompt)
+            summary_text = response.text.strip()
+        except Exception as e:
+            print(f"⚠️ Gemini 모델 시도 실패, 대체 모델 사용: {e}")
+            try:
+                model = genai.GenerativeModel('gemini-1.5-flash')
+                response = model.generate_content(prompt)
+                summary_text = response.text.strip()
+            except Exception as e2:
+                print(f"❌ AI 요약 생성 실패: {e2}")
+                summary_text = f"강의평 {len(reviews)}개를 확인했지만, AI 요약 생성 중 오류가 발생했습니다."
+        
+        return jsonify({
+            'success': True,
+            'summary': summary_text,
+            'review_count': len(reviews),
+            'course_name': course_name,
+            'professor': professor or None
+        })
+        
+    except Exception as e:
+        import traceback
+        print(f"❌ 요약 생성 오류: {e}")
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }), 500
+
 @app.route('/api/courses/from-pinecone', methods=['GET'])
 def get_courses_from_pinecone():
     """Pinecone에서 강의 목록 가져오기 (강의평 기반으로 요약)"""

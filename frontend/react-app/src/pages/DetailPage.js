@@ -1,9 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Star, User, BookOpen, GraduationCap, Clock, Calendar, MapPin, Award
 } from 'lucide-react';
-
-const MAX_DYNAMIC_REVIEWS = 12;
 
 const resolveApiBaseUrl = () => {
   const envBase = (process.env.REACT_APP_BACKEND_URL || '').trim().replace(/\/$/, '');
@@ -38,21 +36,10 @@ const buildApiPath = (path = '') => {
   return base ? `${base}${path}` : path;
 };
 
-const sortReviewsByRecency = (reviews = []) =>
-  [...reviews].sort((a = {}, b = {}) => {
-    const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
-    const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
-    if (dateA !== dateB) {
-      return dateB - dateA;
-    }
-    return (b.semester || '').localeCompare(a.semester || '');
-  });
-
 const DetailPage = ({ selectedCourse, mockCourses }) => {
   const course = selectedCourse || mockCourses[0];
-  const [remoteReviews, setRemoteReviews] = useState({
-    items: [],
-    total: null,
+  const [reviewSummary, setReviewSummary] = useState({
+    text: null,
     isLoading: false,
     error: null,
   });
@@ -61,12 +48,11 @@ const DetailPage = ({ selectedCourse, mockCourses }) => {
     let isMounted = true;
     const controller = new AbortController();
 
-    const fetchReviews = async () => {
+    const fetchReviewSummary = async () => {
       if (!course?.name) {
         if (isMounted) {
-          setRemoteReviews({
-            items: [],
-            total: null,
+          setReviewSummary({
+            text: null,
             isLoading: false,
             error: null,
           });
@@ -74,18 +60,17 @@ const DetailPage = ({ selectedCourse, mockCourses }) => {
         return;
       }
 
-      setRemoteReviews((prev) => ({
+      setReviewSummary((prev) => ({
         ...prev,
         isLoading: true,
         error: null,
       }));
 
       try {
-        // Pinecone에서 직접 강의평 가져오기
-        const apiUrl = buildApiPath(`/api/reviews/from-pinecone`);
+        // 강의평 요약 API 호출
+        const apiUrl = buildApiPath(`/api/reviews/summary`);
         const params = new URLSearchParams({
           course_name: course.name,
-          limit: '100',
         });
         
         if (course.professor) {
@@ -93,7 +78,7 @@ const DetailPage = ({ selectedCourse, mockCourses }) => {
         }
 
         const fullUrl = `${apiUrl}?${params.toString()}`;
-        console.log('🔍 Fetching reviews from:', fullUrl);
+        console.log('📝 Fetching review summary from:', fullUrl);
         console.log('📋 Course info:', { name: course.name, professor: course.professor });
 
         const response = await fetch(fullUrl, {
@@ -106,7 +91,7 @@ const DetailPage = ({ selectedCourse, mockCourses }) => {
         if (!response.ok) {
           const errorText = await response.text().catch(() => '');
           console.error('❌ API Error:', response.status, errorText);
-          throw new Error(`강의평을 불러오지 못했습니다. (${response.status})`);
+          throw new Error(`강의평 요약을 불러오지 못했습니다. (${response.status})`);
         }
 
         const contentType = response.headers.get('content-type') || '';
@@ -120,34 +105,19 @@ const DetailPage = ({ selectedCourse, mockCourses }) => {
         }
 
         const data = await response.json();
-        console.log('✅ API Response:', { success: data.success, total: data.total, reviewsCount: data.reviews?.length });
+        console.log('✅ Summary API Response:', { success: data.success, reviewCount: data.review_count });
         
         if (!data.success) {
           console.error('❌ API returned success=false:', data.error);
-          throw new Error(data.error || '강의평을 불러오는 중 오류가 발생했습니다.');
-        }
-
-        const matchedReviews = Array.isArray(data.reviews) ? sortReviewsByRecency(data.reviews) : [];
-        console.log(`✅ Found ${matchedReviews.length} reviews after sorting`);
-        
-        // 첫 번째 강의평의 rating 확인 (디버깅용)
-        if (matchedReviews.length > 0) {
-          const firstReview = matchedReviews[0];
-          console.log('📊 First review sample:', {
-            rating: firstReview.rating,
-            ratingType: typeof firstReview.rating,
-            semester: firstReview.semester,
-            hasText: !!firstReview.text
-          });
+          throw new Error(data.error || '강의평 요약을 생성하는 중 오류가 발생했습니다.');
         }
 
         if (!isMounted) {
           return;
         }
 
-        setRemoteReviews({
-          items: matchedReviews,
-          total: data.total ?? matchedReviews.length,
+        setReviewSummary({
+          text: data.summary || '강의평 요약을 생성할 수 없습니다.',
           isLoading: false,
           error: null,
         });
@@ -156,20 +126,19 @@ const DetailPage = ({ selectedCourse, mockCourses }) => {
           return;
         }
 
-        console.error('❌ Error fetching reviews:', error);
+        console.error('❌ Error fetching review summary:', error);
         
         if (isMounted) {
-          setRemoteReviews({
-            items: [],
-            total: null,
+          setReviewSummary({
+            text: null,
             isLoading: false,
-            error: error.message || '강의평을 불러오는 중 오류가 발생했습니다.',
+            error: error.message || '강의평 요약을 불러오는 중 오류가 발생했습니다.',
           });
         }
       }
     };
 
-    fetchReviews();
+    fetchReviewSummary();
 
     return () => {
       isMounted = false;
@@ -177,32 +146,6 @@ const DetailPage = ({ selectedCourse, mockCourses }) => {
     };
   }, [course?.name, course?.professor]);
 
-  const fallbackGeneratedReviews = useMemo(() => {
-    const summary = course?.aiSummary || '';
-    const sentences = summary
-      .split(/(?<=[.!?])\s+/)
-      .map((sentence) => sentence.trim())
-      .filter(Boolean);
-
-    const baseSentences = sentences.length > 0 ? sentences : ['강의평 데이터가 준비 중입니다.'];
-    const fallbackCount = Math.min(
-      Math.max(course?.reviewCount || baseSentences.length, 2),
-      5
-    );
-
-    return Array.from({ length: fallbackCount }, (_, index) => baseSentences[index % baseSentences.length]);
-  }, [course?.aiSummary, course?.reviewCount]);
-
-  const hasRemoteReviews = remoteReviews.items.length > 0;
-  const displayedRemoteReviews = hasRemoteReviews
-    ? remoteReviews.items.slice(0, MAX_DYNAMIC_REVIEWS)
-    : [];
-  const reviewCountLabel = hasRemoteReviews
-    ? remoteReviews.total ?? displayedRemoteReviews.length
-    : course.reviewCount || fallbackGeneratedReviews.length;
-  const fallbackRatingLabel =
-    typeof course?.rating === 'number' ? course.rating.toFixed(1) : course?.rating || '4.5';
-  const fallbackSemesterLabel = course?.semester || '최근 학기';
   
   return (
     <div className="min-h-screen bg-slate-50">
@@ -291,114 +234,39 @@ const DetailPage = ({ selectedCourse, mockCourses }) => {
         </div>
 
         <div className="grid grid-cols-3 gap-4">
-          {/* Reviews */}
+          {/* Reviews Summary */}
           <div className="col-span-2 space-y-4">
-            {/* AI Summary */}
-            {course.aiSummary && (
-              <div className="bg-white rounded-lg border border-slate-200 p-6">
-                <h3 className="text-base font-bold text-slate-900 mb-4">수강생 평가 요약</h3>
-                <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-                  <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">{course.aiSummary}</p>
-                </div>
-              </div>
-            )}
-
+            {/* 수강생 평가 요약 */}
             <div className="bg-white rounded-lg border border-slate-200 p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-base font-bold text-slate-900">강의평 ({reviewCountLabel})</h3>
-                {remoteReviews.isLoading && (
-                  <span className="text-xs text-slate-500">불러오는 중...</span>
+                <h3 className="text-base font-bold text-slate-900">수강생 평가 요약</h3>
+                {reviewSummary.isLoading && (
+                  <span className="text-xs text-slate-500">요약 생성 중...</span>
                 )}
               </div>
 
-              {remoteReviews.error && (
+              {reviewSummary.error && (
                 <div className="mb-3 p-3 bg-rose-50 border border-rose-200 rounded-lg">
-                  <p className="text-xs text-rose-600 font-medium mb-1">⚠️ 강의평을 불러오는 중 오류가 발생했습니다</p>
-                  <p className="text-xs text-rose-500">{remoteReviews.error}</p>
+                  <p className="text-xs text-rose-600 font-medium mb-1">⚠️ 강의평 요약을 불러오는 중 오류가 발생했습니다</p>
+                  <p className="text-xs text-rose-500">{reviewSummary.error}</p>
                   <p className="text-xs text-rose-400 mt-1">브라우저 콘솔(F12)에서 자세한 정보를 확인할 수 있습니다.</p>
                 </div>
               )}
 
-              {hasRemoteReviews ? (
-                <div className="space-y-3">
-                  {displayedRemoteReviews.map((review, index) => (
-                    <div
-                      key={review.review_id || `${review.semester || 'review'}-${index}`}
-                      className="p-4 bg-slate-50 rounded-lg border border-slate-200"
-                    >
-                      <div className="flex items-center gap-2 mb-2">
-                        {(() => {
-                          const rating = typeof review.rating === 'number' 
-                            ? review.rating 
-                            : (typeof review.rating === 'string' ? parseFloat(review.rating) : 0);
-                          return rating > 0 ? (
-                            <div className="flex items-center gap-1">
-                              <Star className="w-4 h-4 text-amber-500 fill-current" />
-                              <span className="font-bold text-slate-900">
-                                {rating.toFixed(1)}
-                              </span>
-                            </div>
-                          ) : null;
-                        })()}
-                        {review.semester && (
-                          <span className="text-xs text-slate-500">• {review.semester}</span>
-                        )}
-                        {review.source && (
-                          <span className="text-xs text-slate-400 uppercase tracking-wide">
-                            {review.source}
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-sm text-slate-700 leading-relaxed">
-                        {review.comment || review.text || '강의평 내용이 없습니다.'}
-                      </p>
-                    </div>
-                  ))}
-                  {remoteReviews.total && remoteReviews.total > displayedRemoteReviews.length && (
-                    <p className="text-xs text-slate-500 text-right">
-                      총 {remoteReviews.total}개 중 {displayedRemoteReviews.length}개만 표시 중
-                    </p>
-                  )}
+              {reviewSummary.text ? (
+                <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                  <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">{reviewSummary.text}</p>
                 </div>
-              ) : (
-                <div className="space-y-3">
-                  {remoteReviews.error ? (
-                    <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                      <p className="text-sm text-amber-800 font-medium mb-2">
-                        ⚠️ 실제 강의평 데이터를 불러오지 못했습니다
-                      </p>
-                      <p className="text-xs text-amber-700 mb-3">
-                        API 서버 연결에 실패하여 요약 정보를 표시합니다. 
-                        브라우저 콘솔(F12)에서 자세한 오류를 확인할 수 있습니다.
-                      </p>
-                      <p className="text-xs text-amber-600">
-                        실제 강의평 데이터는 서버가 정상 작동할 때 자동으로 표시됩니다.
-                      </p>
-                    </div>
-                  ) : null}
-                  {fallbackGeneratedReviews.map((text, idx) => (
-                    <div
-                      key={`fallback-${idx}`}
-                      className="p-4 bg-slate-50 rounded-lg border border-slate-200"
-                    >
-                      <div className="flex items-center gap-2 mb-2">
-                        <div className="flex items-center gap-1">
-                          <Star className="w-4 h-4 text-amber-500 fill-current" />
-                          <span className="font-bold text-slate-900">{fallbackRatingLabel}</span>
-                        </div>
-                        <span className="text-xs text-slate-500">• {fallbackSemesterLabel}</span>
-                        <span className="text-xs text-slate-400 bg-slate-200 px-2 py-0.5 rounded">
-                          요약
-                        </span>
-                      </div>
-                      <p className="text-sm text-slate-700 leading-relaxed">
-                        {text || '강의평 데이터가 준비 중입니다.'}
-                      </p>
-                    </div>
-                  ))}
-                  {!remoteReviews.error && remoteReviews.total === 0 && (
-                    <p className="text-xs text-slate-500">등록된 강의평이 아직 없습니다.</p>
-                  )}
+              ) : !reviewSummary.isLoading && !reviewSummary.error ? (
+                <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                  <p className="text-sm text-slate-500">강의평 데이터가 없어 요약을 생성할 수 없습니다.</p>
+                </div>
+              ) : null}
+
+              {!reviewSummary.text && !reviewSummary.isLoading && !reviewSummary.error && course.aiSummary && (
+                <div className="bg-slate-50 rounded-lg p-4 border border-slate-200 mt-3">
+                  <p className="text-xs text-slate-500 mb-2">기본 요약 정보:</p>
+                  <p className="text-sm text-slate-700 leading-relaxed">{course.aiSummary}</p>
                 </div>
               )}
             </div>
