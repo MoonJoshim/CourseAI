@@ -1,16 +1,41 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { 
+import {
   Star, User, BookOpen, GraduationCap, Clock, Calendar, MapPin, Award
 } from 'lucide-react';
 
-const API_BASE_URL = (process.env.REACT_APP_BACKEND_URL || '').replace(/\/$/, '');
 const MAX_DYNAMIC_REVIEWS = 12;
 
+const resolveApiBaseUrl = () => {
+  const envBase = (process.env.REACT_APP_BACKEND_URL || '').trim().replace(/\/$/, '');
+
+  if (typeof window === 'undefined') {
+    return envBase;
+  }
+
+  const isSecurePage = window.location.protocol === 'https:';
+
+  if (envBase) {
+    const isEnvSecure = envBase.startsWith('https://');
+    const isEnvRelative = envBase.startsWith('/');
+
+    if (isEnvSecure || !isSecurePage || isEnvRelative) {
+      return envBase;
+    }
+
+    if (envBase.startsWith('http://') && isSecurePage) {
+      return '';
+    }
+  }
+
+  return '';
+};
+
 const buildApiPath = (path = '') => {
+  const base = resolveApiBaseUrl();
   if (!path.startsWith('/')) {
     path = `/${path}`;
   }
-  return API_BASE_URL ? `${API_BASE_URL}${path}` : path;
+  return base ? `${base}${path}` : path;
 };
 
 const normalizeKey = (value = '') => value.replace(/\s+/g, '').toLowerCase();
