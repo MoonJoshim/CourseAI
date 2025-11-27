@@ -5,6 +5,7 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 import os
 import json
+import sys
 from dotenv import load_dotenv
 from pinecone import Pinecone
 from collections import defaultdict
@@ -13,6 +14,11 @@ from langchain_pinecone import PineconeVectorStore
 from typing import List, Dict, Any, Optional
 from pydantic import BaseModel
 import google.generativeai as genai
+
+# 프로젝트 루트 경로 추가
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
+
+from backend.api import get_mongo_db
 
 # LangChain Embeddings import (버전에 따라 경로가 다를 수 있음)
 try:
@@ -128,7 +134,7 @@ def classify_query_intent(user_query: str) -> QueryIntent:
         # Gemini 프롬프트 구성
         prompt = f"""사용자 질문을 분석하여 다음 정보를 JSON 형식으로 반환해주세요:
 
-1. 구조적 필터 필요 여부 (needs_structured_filter): 
+1. 구조적 필터 필요 여부 (needs_structured_filter):
    - MongoDB course에 있는 필드로 필터링이 필요한지 판단
    - 예: "소프트웨어학과 전공 필수(전필) 과목 추천해줘" → true (department, course_type 필터 필요)
    - 예: "데이터베이스 들을까 말까?" → true (course_name 필터 필요)
@@ -208,17 +214,103 @@ def classify_query_intent(user_query: str) -> QueryIntent:
         )
 
 def filter_from_mongodb(filters: Dict[str, Any]) -> Optional[List[Dict[str, Any]]]:
-    """MongoDB에서 구조적 필터로 강의 검색"""
-    # TODO: 구현 필요
-    return None
+    """
+    MongoDB에서 구조적 필터로 강의 검색
+    
+    Args:
+        filters: 필터 딕셔너리 (department, course_name, professor, 
+                semester, credits, course_type, subject_type, lecture_time, lecture_method 등)
+        
+    Returns:
+        List[Dict]: 강의 정보 리스트 (course_name, professor, department 등 포함)
+    """
+    try:
+        if not filters:
+            return None
+        
+        db = get_mongo_db()
+        collection = db.courses
+        
+        # 동적 쿼리 구성
+        query = {}
+        
+        # department 필터
+        if "department" in filters:
+            query["department"] = {"$regex": filters["department"], "$options": "i"}
+        
+        # course_name 필터
+        if "course_name" in filters:
+            query["course_name"] = {"$regex": filters["course_name"], "$options": "i"}
+        
+        # professor 필터
+        if "professor" in filters:
+            query["professor"] = {"$regex": filters["professor"], "$options": "i"}
+        
+        # semester 필터 (year와 별도)
+        if "semester" in filters:
+            query["semester"] = filters["semester"]
+        
+        # credits 필터
+        if "credits" in filters:
+            query["credits"] = filters["credits"]
+        
+        # course_type 필터 (전필, 전선 등)
+        if "course_type" in filters:
+            query["course_type"] = {"$regex": filters["course_type"], "$options": "i"}
+        
+        # subject_type 필터
+        if "subject_type" in filters:
+            query["subject_type"] = {"$regex": filters["subject_type"], "$options": "i"}
+        
+        # lecture_time 필터
+        if "lecture_time" in filters:
+            query["lecture_time"] = {"$regex": filters["lecture_time"], "$options": "i"}
+        
+        # lecture_method 필터 (비대면, 대면 등)
+        if "lecture_method" in filters:
+            query["lecture_method"] = {"$regex": filters["lecture_method"], "$options": "i"}
+        
+        if not query:
+            return None
+        
+        # MongoDB 검색 실행
+        cursor = collection.find(query).limit(100)  # 최대 100개
+        results = []
+        
+        for doc in cursor:
+            course_data = {
+                "course_name": doc.get("course_name", ""),
+                "professor": doc.get("professor", ""),
+                "department": doc.get("department", ""),
+                "semester": doc.get("semester", ""),
+                "credits": doc.get("credits", 3),
+                "course_type": doc.get("course_type", ""),
+                "subject_type": doc.get("subject_type", ""),
+                "lecture_time": doc.get("lecture_time", ""),
+                "lecture_method": doc.get("lecture_method", ""),
+                "course_id": doc.get("course_id", ""),
+                "rating": doc.get("rating", 0.0),
+                "average_rating": doc.get("average_rating", 0.0),
+                "total_reviews": doc.get("total_reviews", 0)
+            }
+            results.append(course_data)
+        
+        print(f"✅ MongoDB에서 {len(results)}개 강의 발견 (필터: {filters})")
+        return results if results else None
+        
+    except Exception as e:
+        print(f"❌ MongoDB 필터링 오류: {e}")
+        import traceback
+        traceback.print_exc()
+        return None
 
 def semantic_search_pinecone(query: str, candidates: Optional[List[Dict[str, Any]]] = None, top_k: int = 5) -> List[Dict[str, Any]]:
     """
-    Pinecone 의미 기반 검색
+    Pinecone 의미 기반 검색 (metadata 필터 지원)
     
     Args:
         query: 검색할 쿼리 텍스트
-        candidates: MongoDB 후보 목록 (현재 미사용, 향후 필터링에 사용 예정)
+        candidates: MongoDB 후보 목록 (course_name 리스트로 변환하여 필터링에 사용)
         top_k: 반환할 최대 결과 수
         
     Returns:
@@ -232,8 +324,30 @@ def semantic_search_pinecone(query: str, candidates: Optional[List[Dict[str, Any
         ]
     """
     try:
-        # VectorStore에서 retriever 생성
-        retriever = vectorstore.as_retriever(search_kwargs={"k": top_k})
+        # Pinecone 필터 구성
+        pinecone_filter = {}
+        
+        if candidates:
+            # candidates에서 course_name 리스트 추출
+            course_names = []
+            for candidate in candidates:
+                course_name = candidate.get("course_name", "")
+                if course_name:
+                    course_names.append(course_name)
+            
+            if course_names:
+                # Pinecone metadata 필터: course_name이 candidates 중 하나와 일치
+                pinecone_filter = {
+                    "course_name": {"$in": course_names}
+                }
+                print(f"🔍 Pinecone 필터 적용: {len(course_names)}개 course_name")
+        
+        # VectorStore에서 retriever 생성 (필터 포함)
+        search_kwargs = {"k": top_k}
+        if pinecone_filter:
+            search_kwargs["filter"] = pinecone_filter
+        
+        retriever = vectorstore.as_retriever(search_kwargs=search_kwargs)
         
         # 검색 실행 (embed_query가 자동으로 "query:" 프리픽스 추가)
         # Note: embed_query 메서드가 이미 "query: {text}" 형식으로 처리하므로
@@ -248,8 +362,7 @@ def semantic_search_pinecone(query: str, candidates: Optional[List[Dict[str, Any
                 "metadata": doc.metadata
             })
         
-        # TODO: candidates를 사용한 필터링 로직 추가 예정 (MongoDB 통합 시)
-        
+        print(f"✅ Pinecone에서 {len(results)}개 강의평 발견")
         return results
         
     except Exception as e:
@@ -434,6 +547,147 @@ def test_classify_intent_batch():
         return jsonify({
             "total": len(queries),
             "results": results
+        })
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/v2/rag/test/mongodb", methods=["POST"])
+def test_mongodb_filter():
+    """
+    MongoDB 필터링 테스트 엔드포인트 (질문으로 자동 분석)
+    
+    요청 예시:
+    POST /api/v2/rag/test/mongodb
+    Content-Type: application/json
+    {
+      "query": "소프트웨어학과 전공 필수(전필) 과목 추천해줘"
+    }
+    """
+    try:
+        body = request.get_json() or {}
+        user_query = body.get("query", "").strip()
+        
+        if not user_query:
+            return jsonify({"error": "query 파라미터가 필요합니다."}), 400
+        
+        # Intent 분석 후 filters 추출
+        intent = classify_query_intent(user_query)
+        filters = intent.filters
+        
+        # 구조적 필터가 불필요한 경우
+        if not intent.needs_structured_filter or not filters:
+            return jsonify({
+                "query": user_query,
+                "intent": intent.model_dump(),
+                "message": "구조적 필터가 불필요한 질문입니다. MongoDB 필터링을 건너뜁니다.",
+                "filters": {},
+                "count": 0,
+                "results": []
+            })
+        
+        # MongoDB 필터링 실행
+        results = filter_from_mongodb(filters)
+        
+        return jsonify({
+            "query": user_query,
+            "intent": intent.model_dump(),
+            "filters": filters,
+            "count": len(results) if results else 0,
+            "results": results or []
+        })
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/v2/rag/test/pinecone", methods=["POST"])
+def test_pinecone_search():
+    """
+    Pinecone 검색 테스트 엔드포인트
+    
+    요청 예시:
+    POST /api/v2/rag/test/pinecone
+    Content-Type: application/json
+    {
+      "query": "과제 별로 없는 강의",
+      "candidates": [
+        {"course_name": "데이터베이스"},
+        {"course_name": "자료구조"}
+      ],
+      "top_k": 5
+    }
+    """
+    try:
+        body = request.get_json() or {}
+        query = body.get("query", "").strip()
+        candidates = body.get("candidates", None)
+        top_k = body.get("top_k", 5)
+        
+        if not query:
+            return jsonify({"error": "query 파라미터가 필요합니다."}), 400
+        
+        # Pinecone 검색 실행
+        results = semantic_search_pinecone(query, candidates, top_k)
+        
+        return jsonify({
+            "query": query,
+            "candidates_count": len(candidates) if candidates else 0,
+            "top_k": top_k,
+            "results_count": len(results),
+            "results": results
+        })
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/v2/rag/test/full", methods=["POST"])
+def test_full_rag_pipeline():
+    """
+    전체 RAG 파이프라인 테스트 엔드포인트 (답변 생성 제외)
+    
+    요청 예시:
+    POST /api/v2/rag/test/full
+    Content-Type: application/json
+    {
+      "query": "소프트웨어학과 전공 필수(전필) 과목 추천해줘"
+    }
+    """
+    try:
+        body = request.get_json() or {}
+        user_query = body.get("query", "").strip()
+        
+        if not user_query:
+            return jsonify({"error": "query 파라미터가 필요합니다."}), 400
+        
+        # Step 1: 질문 분석
+        intent = classify_query_intent(user_query)
+        
+        # Step 2: MongoDB 필터링
+        mongo_candidates = None
+        if intent.needs_structured_filter:
+            mongo_candidates = filter_from_mongodb(intent.filters)
+        
+        # Step 3: Pinecone 검색
+        pinecone_results = semantic_search_pinecone(
+            query=intent.semantic_query,
+            candidates=mongo_candidates
+        )
+        
+        # Step 4: 결과 병합
+        merged_context = merge_results(mongo_candidates, pinecone_results)
+        
+        return jsonify({
+            "query": user_query,
+            "intent": intent.model_dump(),
+            "mongo_candidates": {
+                "count": len(mongo_candidates) if mongo_candidates else 0,
+                "courses": mongo_candidates[:5] if mongo_candidates else []  # 최대 5개만 표시
+            },
+            "pinecone_results": {
+                "count": len(pinecone_results),
+                "reviews": pinecone_results[:5]  # 최대 5개만 표시
+            },
+            "merged_context": merged_context
         })
         
     except Exception as e:
