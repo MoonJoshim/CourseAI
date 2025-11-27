@@ -1593,6 +1593,8 @@ def get_reviews_from_pinecone():
         professor = request.args.get('professor', '').strip()
         limit = int(request.args.get('limit', 100))
         
+        print(f"🔍 Pinecone 강의평 조회 요청: course_name='{course_name}', professor='{professor}', limit={limit}")
+        
         if not course_name:
             return jsonify({
                 'success': False,
@@ -1609,32 +1611,52 @@ def get_reviews_from_pinecone():
         index = pc.Index(PINECONE_INDEX)
         
         # 모든 강의평 벡터 가져오기
+        print(f"📊 Pinecone에서 강의평 조회 중... (index: {PINECONE_INDEX})")
         results = index.query(
             vector=[0.0] * 768,
             top_k=10000,
             include_metadata=True
         )
+        print(f"✅ Pinecone에서 {len(results.matches)}개 벡터 조회 완료")
         
         # 강의평 목록 생성 및 필터링
         reviews = []
         normalized_course_name = course_name.strip().lower()
         normalized_professor = professor.strip().lower() if professor else None
         
+        print(f"🔍 필터링 기준: course_name='{normalized_course_name}', professor='{normalized_professor}'")
+        
+        matched_count = 0
         for match in results.matches:
             meta = match.metadata
             if not meta:
                 continue
             
-            # 강의명 필터링 (대소문자 무시)
+            # 강의명 필터링 (대소문자 무시, 부분 일치도 허용)
             meta_course_name = meta.get('course_name', '').strip()
-            if not meta_course_name or meta_course_name.lower() != normalized_course_name:
+            if not meta_course_name:
+                continue
+            
+            meta_course_name_lower = meta_course_name.lower()
+            # 정확 일치 또는 서로 포함 관계 확인
+            if (meta_course_name_lower != normalized_course_name and 
+                normalized_course_name not in meta_course_name_lower and
+                meta_course_name_lower not in normalized_course_name):
                 continue
             
             # 교수명 필터링 (제공된 경우, 대소문자 무시)
             if normalized_professor:
                 meta_professor = meta.get('professor', '').strip()
-                if not meta_professor or meta_professor.lower() != normalized_professor:
+                if not meta_professor:
                     continue
+                meta_professor_lower = meta_professor.lower()
+                # 정확 일치 또는 서로 포함 관계 확인
+                if (meta_professor_lower != normalized_professor and
+                    normalized_professor not in meta_professor_lower and
+                    meta_professor_lower not in normalized_professor):
+                    continue
+            
+            matched_count += 1
             
             review_data = {
                 'review_id': match.id,
@@ -1660,6 +1682,8 @@ def get_reviews_from_pinecone():
         
         # limit 적용
         reviews = reviews[:limit]
+        
+        print(f"✅ 필터링 완료: {matched_count}개 매칭, {len(reviews)}개 반환 (limit={limit})")
         
         return jsonify({
             'success': True,

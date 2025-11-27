@@ -82,6 +82,7 @@ const DetailPage = ({ selectedCourse, mockCourses }) => {
 
       try {
         // Pinecone에서 직접 강의평 가져오기
+        const apiUrl = buildApiPath(`/api/reviews/from-pinecone`);
         const params = new URLSearchParams({
           course_name: course.name,
           limit: '100',
@@ -91,17 +92,23 @@ const DetailPage = ({ selectedCourse, mockCourses }) => {
           params.append('professor', course.professor);
         }
 
-        const response = await fetch(buildApiPath(`/api/reviews/from-pinecone?${params.toString()}`), {
+        const fullUrl = `${apiUrl}?${params.toString()}`;
+        console.log('🔍 Fetching reviews from:', fullUrl);
+
+        const response = await fetch(fullUrl, {
           signal: controller.signal,
         });
 
         if (!response.ok) {
+          const errorText = await response.text().catch(() => '');
+          console.error('❌ API Error:', response.status, errorText);
           throw new Error(`강의평을 불러오지 못했습니다. (${response.status})`);
         }
 
         const contentType = response.headers.get('content-type') || '';
         if (!contentType.includes('application/json')) {
           const text = await response.text();
+          console.error('❌ Non-JSON response:', text.substring(0, 200));
           if (text.trim().startsWith('<!')) {
             throw new Error('서버 설정 오류: API 엔드포인트를 찾을 수 없습니다.');
           }
@@ -109,12 +116,15 @@ const DetailPage = ({ selectedCourse, mockCourses }) => {
         }
 
         const data = await response.json();
+        console.log('✅ API Response:', { success: data.success, total: data.total, reviewsCount: data.reviews?.length });
         
         if (!data.success) {
+          console.error('❌ API returned success=false:', data.error);
           throw new Error(data.error || '강의평을 불러오는 중 오류가 발생했습니다.');
         }
 
         const matchedReviews = Array.isArray(data.reviews) ? sortReviewsByRecency(data.reviews) : [];
+        console.log(`✅ Found ${matchedReviews.length} reviews after sorting`);
 
         if (!isMounted) {
           return;
@@ -131,6 +141,8 @@ const DetailPage = ({ selectedCourse, mockCourses }) => {
           return;
         }
 
+        console.error('❌ Error fetching reviews:', error);
+        
         if (isMounted) {
           setRemoteReviews({
             items: [],
