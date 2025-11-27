@@ -129,6 +129,17 @@ const DetailPage = ({ selectedCourse, mockCourses }) => {
 
         const matchedReviews = Array.isArray(data.reviews) ? sortReviewsByRecency(data.reviews) : [];
         console.log(`✅ Found ${matchedReviews.length} reviews after sorting`);
+        
+        // 첫 번째 강의평의 rating 확인 (디버깅용)
+        if (matchedReviews.length > 0) {
+          const firstReview = matchedReviews[0];
+          console.log('📊 First review sample:', {
+            rating: firstReview.rating,
+            ratingType: typeof firstReview.rating,
+            semester: firstReview.semester,
+            hasText: !!firstReview.text
+          });
+        }
 
         if (!isMounted) {
           return;

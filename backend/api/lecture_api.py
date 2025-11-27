@@ -1684,6 +1684,10 @@ def get_reviews_from_pinecone():
                 'year': meta.get('year', None)
             }
             reviews.append(review_data)
+            
+            # 첫 3개 강의평의 rating 로깅 (디버깅용)
+            if len(reviews) <= 3:
+                print(f"  📝 Review {len(reviews)}: rating={rating_value} (type={type(rating_value).__name__}), semester={review_data['semester']}")
         
         # 최신순 정렬 (semester와 uploaded_at 기준)
         reviews.sort(key=lambda x: (
